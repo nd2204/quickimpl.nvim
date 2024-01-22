@@ -3,8 +3,8 @@ local uv = vim.loop
 local ts = vim.treesitter
 local fn = vim.fn
 
-local ts_util = require('generate.treesitter')
-local fs = require('generate.filesystem')
+local ts_util = require('quickimpl.treesitter')
+local fs = require('quickimpl.filesystem')
 
 local M = {
   header_bufnr = -1,
@@ -17,14 +17,14 @@ local declaration_query = ts_util.parse_query_wrapper(
     ((function_definition) @method)
 
     ((template_declaration) @template)
-]]
+  ]]
 )
 
 local default_param_query = ts_util.parse_query_wrapper(
   'cpp',
   [[
     ((optional_parameter_declaration) @parameter)
-]]
+  ]]
 )
 
 -- TODO: Delegate this to user config
