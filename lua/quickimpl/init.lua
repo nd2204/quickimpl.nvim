@@ -7,32 +7,40 @@ local M = {}
 
 local api = vim.api
 local ts = vim.treesitter
-local uv = vim.loop
+-- local uv = vim.loop
 
-api.nvim_create_user_command('Generate', function(params)
-  local header = require('generate.header')
-  local source = require('generate.source')
-
+local function command_callback(params)
   local path = api.nvim_buf_get_name(0)
   local parser = ts.get_parser()
   local root = parser:parse()[1]:root()
 
-  local arg = params.fargs[1]
-  if arg == 'implementations' then
+  local header = require('quickimpl.header')
+  local source = require('quickimpl.source')
+  print(root:sexpr())
+  if params[1] == 'implementations' then
     local namespaces = header.get_declarations(root)
     source.insert_header(path)
     source.implement_methods(namespaces)
   end
-end, {
+end
+
+local supported_args_value = {
+ 'define'
+}
+
+local opts = {
   bang = false,
   bar = false,
   nargs = 1,
   addr = 'other',
   complete = function()
-    return { 'implementations', 'declarations' }
+    return supported_args_value
   end,
-})
+}
 
-M.setup = require('generate.config').setup
+-- REGISTER commands
+api.nvim_create_user_command('Quickimpl', command_callback, opts)
+
+M.setup = require('quickimpl.config').setup
 
 return M

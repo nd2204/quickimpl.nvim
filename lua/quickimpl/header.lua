@@ -1,23 +1,25 @@
 local ts = vim.treesitter
-local ts_util = require('generate.treesitter')
+local ts_util = require('quickimpl.treesitter')
 
 local M = {}
 
+local namespace_query = ts_util.parse_query_wrapper(
+  'cpp', "((namespace_definition) @namespace)"
+)
 local class_query = ts_util.parse_query_wrapper(
-  'cpp',
-  [[
-    ((class_specifier) @class)
-
-    ((namespace_definition) @namespace)
-]]
+  'cpp', "((class_specifier) @class)"
 )
 
-function M.get_declarations(root)
+-------------------------------------------------------------------------------
+
+---@param root (TSNode)
+---@return TSNode[]
+function M.get_method_declarations(root)
   -- The first thing we need is to find all classes and
   -- namespaces so that we know "where to look" for functions
   -- and methods that we have to implement
   local namespaces = {}
-  for _, node, _ in class_query:iter_captures(root, 0) do
+  for _, node, _ in class_query:iter_captures(root, 0, root:start()) do
     namespaces[node] = {}
   end
 
@@ -53,6 +55,12 @@ function M.get_declarations(root)
   end
 
   return namespaces
+end
+
+-------------------------------------------------------------------------------
+
+function M.get_func_declarations()
+  return nil
 end
 
 return M

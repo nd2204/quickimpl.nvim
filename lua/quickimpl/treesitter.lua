@@ -2,76 +2,66 @@ local ts = vim.treesitter
 
 local M = {}
 
+---@param lang (string) language to use for the query
+---@param query (string) query in s-expr syntax
+---@return (Query) Parsed
+---This function ensure valid api call to parsing the query
 function M.parse_query_wrapper(lang, query)
-  if ts.query.parse ~= nil then
-    return ts.query.parse(lang, query)
-  end
-
-  return ts.query.parse_query(lang, query)
+  return ts.query.parse(lang, query)
 end
 
-function M.children_with_type(type, parent)
+---@param type (string)
+---@param parent (TSNode)
+---@return TSNode[] matching_childrens
+function M.childrens_with_type(type, parent)
   local found = {}
-
   for child in parent:iter_children() do
-    local child_type = child:type()
-
-    if child_type == type then
+    if child:type() == type then
       table.insert(found, child)
     end
   end
-
   return found
 end
 
--- @return boolean
+---@param node (TSNode)
+---@return boolean
 function M.is_function_declaration(node)
-  local type = node:type()
-  if type == 'function_definition' then
+  if node:type() == 'function_definition' then
     return false
   end
-
   -- This is needed to understand whether the node is a pure
   -- virtual function, in which case we should return false,
   -- because it should not be implemented. The way a pure
   -- virtual function can be detected is by looking for
   -- 'number_literal' nodes on the same level or under ERROR nodes.
-  local numbers = M.children_with_type('number_literal', node)
-  local errors = M.children_with_type('ERROR', node)
-  local numbers_from_error = {}
-  if #errors ~= 0 then
-    numbers_from_error = M.children_with_type('number_literal', errors[1])
-  end
-  if #numbers >= 1 or #numbers_from_error >= 1 then
+  local numbers = M.childrens_with_type('number_literal', node)
+  if #numbers > 0 then
     return false
   end
 
-  local declrators = M.children_with_type('function_declarator', node)
-  if #declrators ~= 0 then
-    return true
-  end
-
-  local declarations = M.children_with_type('declaration', node)
-  if #declarations ~= 0 then
-    return true
+  for s in {'function_declarator', 'declaration'} do
+    if #M.childrens_with_type(s, node) ~= 0 then
+      return true
+    end
   end
 
   return false
 end
 
--- @returns <node> or nil
+---@param type (string)
+---@param parent (TSNode)
+---@return (TSNode | nil)
 function M.first_child_with_type(type, parent)
   for child in parent:iter_children() do
-    local child_type = child:type()
-
-    if child_type == type then
+    if child:type() == type then
       return child
     end
   end
-
   return nil
 end
 
+---@param declarator (TSNode)
+---@return (TSNode | nil) identifier if there is matching field name
 function M.declarator_identifier(declarator)
   local interesting_names = {
     'field_identifier',

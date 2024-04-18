@@ -5,6 +5,7 @@ local fn = vim.fn
 
 local ts_util = require('quickimpl.treesitter')
 local fs = require('quickimpl.filesystem')
+local config = require('quickimpl.config')
 
 local M = {
   header_bufnr = -1,
@@ -12,26 +13,15 @@ local M = {
 }
 
 local declaration_query = ts_util.parse_query_wrapper(
-  'cpp',
-  [[
-    ((function_definition) @method)
-
-    ((template_declaration) @template)
-  ]]
+  'cpp', "((function_definition) @method) ((template_declaration) @template)"
 )
 
 local default_param_query = ts_util.parse_query_wrapper(
-  'cpp',
-  [[
-    ((optional_parameter_declaration) @parameter)
-  ]]
+  'cpp', "((optional_parameter_declaration) @parameter)"
 )
 
--- TODO: Delegate this to user config
-local brace_pattern = '\n{\n\n}\n\n'
-
 local function is_include_present(root, bufnr, include)
-  local includes = ts_util.children_with_type('preproc_include', root)
+  local includes = ts_util.childrens_with_type('preproc_include', root)
   for i = 1, #includes do
     local text = ts.get_node_text(includes[i], bufnr, {})
     if string.match(text, include) then
@@ -42,7 +32,10 @@ local function is_include_present(root, bufnr, include)
   return false
 end
 
-local function declaration_to_implementation(declaration, namespace, bufnr)
+---@param declaration (TSNode)
+---@param namespace (table)
+---@param bufnr (integer)
+local function declaration_to_definition(declaration, namespace, bufnr)
   local prefix = namespace .. '::'
   local text = ts.get_node_text(declaration, bufnr, {})
 
@@ -68,6 +61,7 @@ local function declaration_to_implementation(declaration, namespace, bufnr)
   text = string.sub(text, 1, -2)
 
   -- Remove default value
+
   for _, node, _ in default_param_query:iter_captures(declaration, M.header_bufnr) do
     local dirty = ts.get_node_text(node, M.header_bufnr, {})
     local clean = string.gsub(dirty, '%s*=.*', '')
@@ -78,7 +72,7 @@ local function declaration_to_implementation(declaration, namespace, bufnr)
   return text
 end
 
-local function get_implemenations(root)
+local function get_definition(root)
   local strings = {}
 
   for _, node, _ in declaration_query:iter_captures(root, 0) do
@@ -90,17 +84,18 @@ local function get_implemenations(root)
   return strings
 end
 
-function M.implement_methods(namespaces)
+function M.define_methods(namespaces)
   local path = api.nvim_buf_get_name(0)
   local root, _ = fs.open_file_in_buffer(path)
+  local brace_pattern = config.getDefaultvalue('brace_pattern')
 
   local strings = {}
-  local existing_implemenations = get_implemenations(root)
+  local existing_implemenations = get_definition(root)
   for _, v in pairs(namespaces) do
     local name = v['name']
     for i = 1, #v['declarations'] do
       local declaration = v['declarations'][i]
-      local implementation = declaration_to_implementation(declaration, name, M.header_bufnr)
+      local implementation = declaration_to_definition(declaration, name, M.header_bufnr)
       if not vim.tbl_contains(existing_implemenations, implementation) then
         table.insert(strings, implementation .. brace_pattern)
       end
