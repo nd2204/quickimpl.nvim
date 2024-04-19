@@ -4,9 +4,10 @@ local config = {}
 --- Private Properties
 --------------------------------------------------------------------------------
 
-local default = {
+local default_config = {
   add_header_include = true,
-  brace_pattern = " {\n\t\n}\n\n"
+  brace_pattern = " {\n\t\n}\n\n",
+  lang = ''
 }
 
 --------------------------------------------------------------------------------
@@ -28,9 +29,9 @@ end
 --------------------------------------------------------------------------------
 
 function config.setup(opts)
-  for k, _ in pairs(default) do
+  for k, _ in pairs(default_config) do
     if opts[k] ~= nil then
-      default[k] = opts[k]
+      default_config[k] = opts[k]
     end
   end
 
@@ -41,7 +42,7 @@ function config.setup(opts)
 end
 
 function config.getDefaultValue(key)
-  return default[key]
+  return default_config[key]
 end
 
 ---@return (string) OS
