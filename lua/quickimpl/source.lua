@@ -1,5 +1,5 @@
 local api = vim.api
-local uv = vim.loop
+local uv = vim.uv
 local ts = vim.treesitter
 local fn = vim.fn
 
@@ -20,7 +20,10 @@ local default_param_query = ts_util.parse_query_wrapper(
   'cpp', "((optional_parameter_declaration) @parameter)"
 )
 
-local function is_include_present(root, bufnr, include)
+--------------------------------------------------------------------------------
+--- Local functions
+--------------------------------------------------------------------------------
+local function buffer_has_include(root, bufnr, include)
   local includes = ts_util.childrens_with_type('preproc_include', root)
   for i = 1, #includes do
     local text = ts.get_node_text(includes[i], bufnr, {})
@@ -28,9 +31,10 @@ local function is_include_present(root, bufnr, include)
       return true
     end
   end
-
   return false
 end
+
+--------------------------------------------------------------------------------
 
 ---@param declaration (TSNode)
 ---@param namespace (table)
@@ -39,10 +43,10 @@ local function declaration_to_definition(declaration, namespace, bufnr)
   local prefix = namespace .. '::'
   local text = ts.get_node_text(declaration, bufnr, {})
 
-  -- Remove keywords that shouldn't be present in method implementations
+  -- Remove keywords that shouldn't be present in method definitions
   local keywords = { 'virtual', 'override', 'final', 'static', 'explicit', 'friend' }
-  for k = 1, #keywords do
-    local pattern = keywords[k] .. '%s*'
+  for k in keywords do
+    local pattern = k .. '%s*'
     text = string.gsub(text, pattern, '')
   end
 
@@ -102,9 +106,9 @@ function M.define_methods(namespaces)
     end
   end
 
-  local fd = uv.fs_open(path, 'a', 438)
-  uv.fs_write(fd, strings, 0)
-  uv.fs_close(fd)
+  local fd = fs.fs_open(path, 'a', 438)
+  fs.fs_write(fd, strings, 0)
+  fs.fs_close(fd)
 
   -- It is neccessary to reload the buffer because
   -- in some cases Neovim doesn't render the newly
@@ -122,7 +126,7 @@ function M.insert_header(header_path)
   local root, source_bufnr = fs.open_file_in_buffer(source_path)
   M.source_bufnr = source_bufnr
 
-  if not is_include_present(root, M.source_bufnr, name) then
+  if not buffer_has_include(root, M.source_bufnr, name) then
     fs.append_to_file(source_path, header_text .. '\n\n')
   end
 end
