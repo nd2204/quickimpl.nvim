@@ -19,69 +19,79 @@ local exension_index = {
 local source_dir_names = { 'source', 'src' }
 local include_dir_names = { 'include', 'inc' }
 
+local function isValidPath(path)
+  return vim.fn.filereadable(path) ~= 0
+end
+
 local function is_user_defined_source_directory(name, type)
     for i = 1, #source_dir_names do
-      if source_dir_names[i] == string.lower(name) and type == 'directory' then
+      if source_dir_names[string.lower(name)] ~= nil and type == 'directory' then
         return true
       end
     end
 end
----@param source_path string
----@return (string) source_path (modified or unmodified)
-local function attempt_to_change_to_source_dir(source_path)
-  -- Remove last directory
-  -- Scan it
-  -- Decide whether it has source directory
-  --     If yes, replace path part with the directory name
-  --     Else return source_path
 
+local function is_user_defined_include_directory(name, type)
+    for i = 1, #include_dir_names do
+      if include_dir_names[string.lower(name)] ~= nil and type == 'directory' then
+        return true
+      end
+    end
+end
+
+---@param headerfile_path string
+---@return (string) source_dir_path (modified or unmodified)
+---[
+---Seach upward (if possible) from current directory 
+---the parents directory for the source directory 
+---If found return the path to that directory
+---Else return the unchanged headerfile_path (remain in that path)
+---]
+local function attempt_to_change_to_source_dir(headerfile_path)
   -- utilize vim.fs library to get the basename and dirname
   -- instead of custom function defines
-  assert(
-    source_path ~= '' and source_path,
-    "ERROR (at line:" .. debug.getinfo(1).currentline .. "): source_path is nil"
+  assert(headerfile_path,
+    "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is nil" )
+  assert(headerfile_path ~= '',
+    "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is empty"
+  )
+  assert(vim.fn.isdirectory(headerfile_path),
+    "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is not a valid path"
   )
 
-  local directory_above = source_path
-  local count = 0;
-  for _ in fs.parents(source_path) do
-    count = count + 1
+  local source_dir_path = headerfile_path
+  local currentDir      = fs.dirname(headerfile_path)
+  local headerfile_name = fs.basename(headerfile_path)
+
+  local stopDir = fs.dirname(fs.dirname(currentDir))
+  stopDir = stopDir and stopDir or currentDir
+  local matches = fs.find(source_dir_names, {
+    path    = headerfile_path,
+    upward  = true,  
+    -- set stop to currentDir if currentDir has no parents
+    stop    = stopDir,
+    type    = 'directory',
+    limit   = 1
+  })
+
+  if matches[1] ~= nil then
+    return fs.normalize(matches[1] .. "/")
   end
 
-  if count > 2 then
-    directory_above = fs.dirname(fs.dirname(source_path))
-  end
-
-  local filename = fs.basename(source_path)
-
-  local files = uv.fs_scandir(directory_above)
-  local name, type = uv.fs_scandir_next(files)
-  -- vim.inspect(name)
-  print(name)
-  local ok = false
-  while name ~= nil do
-    if is_user_defined_source_directory(name, type) then
-      return directory_above .. '/' .. name .. filename
-    end
-    ok, name, type = pcall(fs.fs_scandir_next, files) 
-    if not ok then
-      return source_path
-    end
-    name, type = fs.fs_scandir_next(files)
-  end
-
-  return source_path
+  return currentDir
 end
 
 --------------------------------------------------------------------------------
 --- public Methods
 --------------------------------------------------------------------------------
 
+---@param headerfile_path (string)
 ---@return (string | nil)
-function M.header_to_source(header_name)
+---
+function M.get_sourcefile_equivalence(headerfile_path)
   local sourcefile_ext = ''
   local headerfile_ext = ''
-  for w in string.gmatch(header_name, '%.%w+') do
+  for w in string.gmatch(headerfile_path, '%.%w+') do
     sourcefile_ext = exension_index[w]
     headerfile_ext = w
   end
@@ -91,7 +101,7 @@ function M.header_to_source(header_name)
   end
 
   headerfile_ext = '%' .. headerfile_ext
-  local source_path = string.gsub(header_name, headerfile_ext, sourcefile_ext)
+  local source_path = string.gsub(headerfile_path, headerfile_ext, sourcefile_ext)
 
   -- If a project has separate directories for source files and
   -- header files, placing the source file in the header directory
@@ -118,11 +128,12 @@ function M.open_file_in_buffer(path)
 end
 
 function M.append_to_file(path, content)
-  local fd = fs.fs_open(path, 'a', 438)
-  fs.fs_write(fd, content .. '\n\n', 0)
-  fs.fs_close(fd)
+  local fd = uv.fs_open(path, 'a', 438)
+  uv.fs_write(fd, content .. '\n\n', 0)
+  uv.fs_close(fd)
 end
 
-print(attempt_to_change_to_source_dir('/home/haru/repos/'))
+print(M.('/home/haru/repos/code/lang/cpp/test/include/test.hpp'))
+-- print(attempt_to_change_to_source_dir('/test.hpp'))
 
 return M
