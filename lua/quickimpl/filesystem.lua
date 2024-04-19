@@ -2,7 +2,7 @@ local M = {}
 
 local api = vim.api
 local ts = vim.treesitter
-local uv = vim.loop
+local uv = vim.uv
 local fs = vim.fs
 
 local exension_index = {
@@ -14,28 +14,20 @@ local exension_index = {
   ['.H'] = '.C',
 }
 
+-- TODO: Let the user choose where to store the 
+-- generated definitions in config.lua
 local source_dir_names = { 'source', 'src' }
 local include_dir_names = { 'include', 'inc' }
 
--- use \ as separator for paths if on Windows
-local is_windows = vim.fn.has("win32") or vim.fn.has("win64")
-local separator = is_windows and "\\" or "/"
-
--- Logically is something like 'cd ..'
-local function remove_basename(filepath)
-  local first = nil
-  for i = #filepath, 1, -1 do
-    if string.sub(filepath, i, i) == separator then
-      first = i
-      break
+local function is_user_defined_source_directory(name, type)
+    for i = 1, #source_dir_names do
+      if source_dir_names[i] == string.lower(name) and type == 'directory' then
+        return true
+      end
     end
-  end
-
-  -- Need to substract one to remove forward slash
-  return string.sub(filepath, 1, first - 1), string.sub(filepath, first)
 end
-
--- Returns: string (modified or unmodified source_path)
+---@param source_path string
+---@return (string) source_path (modified or unmodified)
 local function attempt_to_change_to_source_dir(source_path)
   -- Remove last directory
   -- Scan it
@@ -43,46 +35,70 @@ local function attempt_to_change_to_source_dir(source_path)
   --     If yes, replace path part with the directory name
   --     Else return source_path
 
-  local directory_above, filename = remove_basename(source_path)
-  directory_above = remove_basename(directory_above)
+  -- utilize vim.fs library to get the basename and dirname
+  -- instead of custom function defines
+  assert(
+    source_path ~= '' and source_path,
+    "ERROR (at line:" .. debug.getinfo(1).currentline .. "): source_path is nil"
+  )
 
-  local file = uv.fs_scandir(directory_above)
-  local name, type = uv.fs_scandir_next(file)
+  local directory_above = source_path
+  local count = 0;
+  for _ in fs.parents(source_path) do
+    count = count + 1
+  end
+
+  if count > 2 then
+    directory_above = fs.dirname(fs.dirname(source_path))
+  end
+
+  local filename = fs.basename(source_path)
+
+  local files = uv.fs_scandir(directory_above)
+  local name, type = uv.fs_scandir_next(files)
+  -- vim.inspect(name)
+  print(name)
+  local ok = false
   while name ~= nil do
-    for i = 1, #source_dir_names do
-      if source_dir_names[i] == string.lower(name) and type == 'directory' then
-        return directory_above .. '/' .. name .. filename
-      end
+    if is_user_defined_source_directory(name, type) then
+      return directory_above .. '/' .. name .. filename
     end
-    name, type = uv.fs_scandir_next(file)
+    ok, name, type = pcall(fs.fs_scandir_next, files) 
+    if not ok then
+      return source_path
+    end
+    name, type = fs.fs_scandir_next(files)
   end
 
   return source_path
 end
 
--- Returns: string or nil
+--------------------------------------------------------------------------------
+--- public Methods
+--------------------------------------------------------------------------------
+
+---@return (string | nil)
 function M.header_to_source(header_name)
-  local source_extension = ''
-  local header_extension = ''
+  local sourcefile_ext = ''
+  local headerfile_ext = ''
   for w in string.gmatch(header_name, '%.%w+') do
-    source_extension = exension_index[w]
-    header_extension = w
+    sourcefile_ext = exension_index[w]
+    headerfile_ext = w
   end
 
-  if source_extension == '' or header_extension == '' then
+  if sourcefile_ext == '' or headerfile_ext == '' then
     return nil
   end
 
-  header_extension = '%' .. header_extension
-  local source_path = string.gsub(header_name, header_extension, source_extension)
+  headerfile_ext = '%' .. headerfile_ext
+  local source_path = string.gsub(header_name, headerfile_ext, sourcefile_ext)
 
   -- If a project has separate directories for source files and
   -- header files, placing the source file in the header directory
   -- will be incorrect. Thus if we can detect that the header is
   -- in an "include" directory we can attempt to find the "source"
   -- directory.
-  local directory = remove_basename(source_path)
-  directory = fs.basename(directory)
+  local directory = fs.basename(fs.dirname(source_path))
   for i = 1, #include_dir_names do
     if string.lower(directory) == include_dir_names[i] then
       source_path = attempt_to_change_to_source_dir(source_path)
@@ -102,9 +118,11 @@ function M.open_file_in_buffer(path)
 end
 
 function M.append_to_file(path, content)
-  local fd = uv.fs_open(path, 'a', 438)
-  uv.fs_write(fd, content .. '\n\n', 0)
-  uv.fs_close(fd)
+  local fd = fs.fs_open(path, 'a', 438)
+  fs.fs_write(fd, content .. '\n\n', 0)
+  fs.fs_close(fd)
 end
+
+print(attempt_to_change_to_source_dir('/home/haru/repos/'))
 
 return M
