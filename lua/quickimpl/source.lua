@@ -4,7 +4,7 @@ local ts = vim.treesitter
 local fn = vim.fn
 
 local ts_util = require('quickimpl.treesitter')
-local fs = require('quickimpl.filesystem')
+local qfs = require('quickimpl.filesystem')
 local config = require('quickimpl.config')
 
 local M = {
@@ -23,6 +23,7 @@ local default_param_query = ts_util.parse_query_wrapper(
 --------------------------------------------------------------------------------
 --- Local functions
 --------------------------------------------------------------------------------
+
 local function buffer_has_include(root, bufnr, include)
   local includes = ts_util.childrens_with_type('preproc_include', root)
   for i = 1, #includes do
@@ -65,7 +66,6 @@ local function declaration_to_definition(declaration, namespace, bufnr)
   text = string.sub(text, 1, -2)
 
   -- Remove default value
-
   for _, node, _ in default_param_query:iter_captures(declaration, M.header_bufnr) do
     local dirty = ts.get_node_text(node, M.header_bufnr, {})
     local clean = string.gsub(dirty, '%s*=.*', '')
@@ -90,7 +90,7 @@ end
 
 function M.define_methods(namespaces)
   local path = api.nvim_buf_get_name(0)
-  local root, _ = fs.open_file_in_buffer(path)
+  local root, _ = qfs.open_file_in_buffer(path)
   local brace_pattern = config.getDefaultvalue('brace_pattern')
 
   local strings = {}
@@ -106,9 +106,9 @@ function M.define_methods(namespaces)
     end
   end
 
-  local fd = fs.fs_open(path, 'a', 438)
-  fs.fs_write(fd, strings, 0)
-  fs.fs_close(fd)
+  local fd = qfs.fs_open(path, 'a', 438)
+  qfs.fs_write(fd, strings, 0)
+  qfs.fs_close(fd)
 
   -- It is neccessary to reload the buffer because
   -- in some cases Neovim doesn't render the newly
@@ -117,17 +117,17 @@ function M.define_methods(namespaces)
 end
 
 function M.insert_header(header_path)
-  local source_path = fs.header_to_source(header_path)
+  local source_path = qfs.header_to_source(header_path)
   local name = fn.fnamemodify(header_path, ':t')
   local header_text = '#include "' .. name .. '"'
 
   local header_bufnr = api.nvim_get_current_buf()
   M.header_bufnr = header_bufnr
-  local root, source_bufnr = fs.open_file_in_buffer(source_path)
+  local root, source_bufnr = qfs.open_file_in_buffer(source_path)
   M.source_bufnr = source_bufnr
 
   if not buffer_has_include(root, M.source_bufnr, name) then
-    fs.append_to_file(source_path, header_text .. '\n\n')
+    qfs.append_to_file(source_path, header_text .. '\n\n')
   end
 end
 
