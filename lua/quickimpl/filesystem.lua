@@ -1,9 +1,13 @@
 local M = {}
 
+local helper = require("quickimpl.helper")
 local api = vim.api
 local ts = vim.treesitter
 local uv = vim.uv
-local fs = vim.fs
+
+--- Extend the vim.fs api
+M.fs = vim.fs
+-- local helper = require("quickimpl.helper")
 
 local exension_index = {
   ['.hpp'] = '.cpp',
@@ -23,21 +27,34 @@ local function isValidPath(path)
   return vim.fn.filereadable(path) ~= 0
 end
 
-local function is_user_defined_source_directory(name, type)
-    for i = 1, #source_dir_names do
-      if source_dir_names[string.lower(name)] ~= nil and type == 'directory' then
-        return true
-      end
-    end
+local function base_dirname(path)
+  path = fs.dirname(path)
+  return path and fs.basename(path) or nil
 end
 
-local function is_user_defined_include_directory(name, type)
-    for i = 1, #include_dir_names do
-      if include_dir_names[string.lower(name)] ~= nil and type == 'directory' then
-        return true
-      end
-    end
+---This function will attempt to retrieve
+---@param path (string | nil)
+---@param height (integer)
+---@return (string | nil) modified_path
+local function M.get_parent_dir(path, height)
+  height = height and height or 1
+  if path == nil then
+     return nil
+  end
+  path = fs.normalize(path)
+  for _ = 1, height do
+    path = fs.dirname(path)
+  end
+  return path
 end
+
+-- local function is_user_defined_include_directory(name, type)
+--     for i = 1, #include_dir_names do
+--       if include_dir_names[string.lower(name)] ~= nil and type == 'directory' then
+--         return true
+--       end
+--     end
+-- end
 
 ---@param headerfile_path string
 ---@return (string) source_dir_path (modified or unmodified)
@@ -47,35 +64,36 @@ end
 ---If found return the path to that directory
 ---Else return the unchanged headerfile_path (remain in that path)
 ---]
-local function attempt_to_change_to_source_dir(headerfile_path)
+local function attempt_to_get_source_dir(headerfile_path)
   -- utilize vim.fs library to get the basename and dirname
   -- instead of custom function defines
+  headerfile_path = M.fs.normalize(headerfile_path)
   assert(headerfile_path,
     "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is nil" )
   assert(headerfile_path ~= '',
     "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is empty"
   )
-  assert(vim.fn.isdirectory(headerfile_path),
+  assert(isValidPath(headerfile_path),
     "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is not a valid path"
   )
 
-  local source_dir_path = headerfile_path
-  local currentDir      = fs.dirname(headerfile_path)
-  local headerfile_name = fs.basename(headerfile_path)
+  local currentDir      = helper.default_if_nil(headerfile_path, M.fs.dirname(headerfile_path))
+  -- local headerfile_name = fs.basename(headerfile_path)
 
-  local stopDir = fs.dirname(fs.dirname(currentDir))
-  stopDir = stopDir and stopDir or currentDir
-  local matches = fs.find(source_dir_names, {
+  --- TODO: let user choose which source dir to save the source file
+  local stopDir = M.get_parent_dir(currentDir, 2)
+  stopDir = helper.default_if_nil(currentDir, stopDir)
+  local source_dir_paths = fs.find(source_dir_names, {
     path    = headerfile_path,
-    upward  = true,  
+    upward  = true,
     -- set stop to currentDir if currentDir has no parents
     stop    = stopDir,
     type    = 'directory',
-    limit   = 1
+    limit   = math.huge
   })
 
-  if matches[1] ~= nil then
-    return fs.normalize(matches[1] .. "/")
+  if source_dir_paths[1] ~= nil then
+    return M.fs.normalize(source_dir_paths[1] .. "/")
   end
 
   return currentDir
@@ -86,36 +104,40 @@ end
 --------------------------------------------------------------------------------
 
 ---@param headerfile_path (string)
----@return (string | nil)
----
+---@return (string | nil) sourcefile_path
+---This function
 function M.get_sourcefile_equivalence(headerfile_path)
-  local sourcefile_ext = ''
-  local headerfile_ext = ''
-  for w in string.gmatch(headerfile_path, '%.%w+') do
-    sourcefile_ext = exension_index[w]
-    headerfile_ext = w
-  end
+  headerfile_path = M.fs.normalize(headerfile_path)
+  local headerfile_name = M.fs.basename(headerfile)
+  local currentDir      = M.fs.dirname(headerfile_path)
+  --- %. match a literal period;
+  --- ([^%.]+)$ matches one or more characters that are not periods.
+  --- This captures the extension characters. and anchor the pattern 
+  --- to the end of the string
+  local headerfile_ext  = headerfile_path:match("(%.[^%.]+)$")
+  --- TODO: change the default nil value to support both c and cpp
+  headerfile_ext = headerfile_ext and headerfile_ext or ".hpp"
+  local sourcefile_ext = exension_index[headerfile_ext]
+  assert(sourcefile_ext, "Error: unsupported header extension " .. headerfile_ext)
 
-  if sourcefile_ext == '' or headerfile_ext == '' then
-    return nil
-  end
+  local sourcefile_name = string.gsub(headerfile_name, headerfile_ext, sourcefile_ext)
 
-  headerfile_ext = '%' .. headerfile_ext
-  local source_path = string.gsub(headerfile_path, headerfile_ext, sourcefile_ext)
+  --- concatenate "/" to a path_string or any variables is EXCEPTIONALLY DANGEROUS proceed with caution
+  local sourcedir_path = attempt_to_get_source_dir(headerfile_path)
+  local sourcefile_path = sourcedir_path .. "/" .. sourcefile_name .. sourcefile_ext
 
-  -- If a project has separate directories for source files and
-  -- header files, placing the source file in the header directory
-  -- will be incorrect. Thus if we can detect that the header is
-  -- in an "include" directory we can attempt to find the "source"
-  -- directory.
-  local directory = fs.basename(fs.dirname(source_path))
-  for i = 1, #include_dir_names do
-    if string.lower(directory) == include_dir_names[i] then
-      source_path = attempt_to_change_to_source_dir(source_path)
-    end
-  end
+  print(sourcefile_path)
+  -- local directory = base_dirname(source_path)
+  -- if directory == nil then
+  --   return source_path
+  -- end
+  -- for i = 1, #include_dir_names do
+  --   if include_dir_names[string.lower(directory)] then
+  --     source_path = attempt_to_get_source_dir(source_path)
+  --   end
+  -- end
 
-  return source_path
+  -- return source_path
 end
 
 function M.open_file_in_buffer(path)
@@ -127,13 +149,16 @@ function M.open_file_in_buffer(path)
   return root, bufnr
 end
 
-function M.append_to_file(path, content)
+---@param path (string)
+---@param content (string)
+function M.file_append_content(path, content)
+  path = M.fs.normalize(path)
   local fd = uv.fs_open(path, 'a', 438)
   uv.fs_write(fd, content .. '\n\n', 0)
   uv.fs_close(fd)
 end
 
-print(M.('/home/haru/repos/code/lang/cpp/test/include/test.hpp'))
+print(M.get_sourcefile_equivalence('~/repos/code/lang/cpp/test/include/test.hpp'))
 -- print(attempt_to_change_to_source_dir('/test.hpp'))
 
 return M
