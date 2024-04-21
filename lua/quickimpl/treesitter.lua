@@ -81,4 +81,22 @@ function M.declarator_identifier(declarator)
   return nil
 end
 
+---@param root (TSNode)
+---@param lang (string)
+---@param query (string)
+---@return table<TSNode, table> captured
+function M.get_query_capture(root, lang, query)
+  local parsed = ts.query.parse(lang, query)
+  local captured = {}
+  for _, node, _ in parsed:iter_captures(root, 0, root:start()) do
+    captured[node] = {}
+  end
+  return captured
+end
+
+---@param node (TSNode)
+function M.debug.print_node_sexpr(node)
+  print(node:sexpr())
+end
+
 return M

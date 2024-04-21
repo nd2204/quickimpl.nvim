@@ -2,6 +2,7 @@ local M = {}
 
 local api = vim.api
 local ts = vim.treesitter
+local ts_util = require('quickimpl.treesitter')
 -- local uv = vim.loop
 
 --------------------------------------------------------------------------------
@@ -23,6 +24,19 @@ M.opts = {
   end,
 }
 
+
+local class_query = [[
+(namespace_definition
+	name: (namespace_identifier) @name
+    body: (declaration_list
+    	(class_specifier) @ns_class))
+
+((class_specifier) @class)
+
+(declaration
+	type: [(type_identifier) (primitive_type)] @type
+	declarator: (function_declarator) @declarator)
+]]
 --------------------------------------------------------------------------------
 --- Local functions
 --------------------------------------------------------------------------------
@@ -34,7 +48,7 @@ function M.callback(params)
   local parser = ts.get_parser()
   local root = parser:parse()[1]:root()
 
-  print(root:next_sibling():sexpr())
+  ts_util.debug.print_node_sexpr(root)
 
   -- local header = require('quickimpl.header')
   -- local source = require('quickimpl.source')

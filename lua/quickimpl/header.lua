@@ -6,9 +6,25 @@ local M = {}
 local namespace_query = ts_util.parse_query_wrapper(
   'cpp', "((namespace_definition) @namespace)"
 )
-local class_query = ts_util.parse_query_wrapper(
-  'cpp', "((class_specifier) @class)"
-)
+
+local class_query = [[
+(namespace_definition
+	name: (namespace_identifier) @name
+    body: (declaration_list
+    	(class_specifier) @ns_class))
+
+((class_specifier) @class)
+
+(declaration
+	type: [(type_identifier) (primitive_type)] @type
+	declarator: (function_declarator) @declarator)
+]]
+
+local function_declaration_query = [[
+(declaration
+	type: [(type_identifier) (primitive_type)] @type
+	declarator: (function_declarator) @declarator)
+]]
 
 -------------------------------------------------------------------------------
 
@@ -18,15 +34,12 @@ function M.get_method_declarations(root)
   -- The first thing we need is to find all classes and
   -- namespaces so that we know "where to look" for functions
   -- and methods that we have to implement
-  local namespaces = {}
-  for _, node, _ in class_query:iter_captures(root, 0, root:start()) do
-    namespaces[node] = {}
-  end
+  local classes = ts_util.get_query_capture(root, 'cpp', class_query)
 
   -- After we have all roots for classes and namespaces we need
   -- to find their names; this is necessary because an implementation
   -- must contain the relevant namespace name (e.g. Window::Create())
-  for k, v in pairs(namespaces) do
+  for k, v in pairs(classes) do
     local identifier = ts_util.first_child_with_type('type_identifier', k)
     if identifier == nil then
       identifier = ts_util.first_child_with_type('namespace_identifier', k)
@@ -38,7 +51,7 @@ function M.get_method_declarations(root)
     v['name'] = text
   end
 
-  for k, v in pairs(namespaces) do
+  for k, v in pairs(classes) do
     v['declarations'] = {}
     local fields = ts_util.first_child_with_type('field_declaration_list', k)
     if fields == nil then
@@ -54,7 +67,7 @@ function M.get_method_declarations(root)
     end
   end
 
-  return namespaces
+  return classes
 end
 
 -------------------------------------------------------------------------------
