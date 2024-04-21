@@ -1,1 +1,3 @@
-lua require('quickimpl')
+lua << EOF
+  require('quickimpl')
+EOF

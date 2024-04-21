@@ -4,18 +4,24 @@ local helper = require("quickimpl.helper")
 local api = vim.api
 local ts = vim.treesitter
 local uv = vim.uv
+local config = require("quickimpl.config")
 
 --- Extend the vim.fs api
 M.fs = vim.fs
 -- local helper = require("quickimpl.helper")
 
 local exension_index = {
-  ['.hpp'] = '.cpp',
-  ['.h'] = '.cpp',
-  ['.hh'] = '.cc',
-  ['.hxx'] = '.cxx',
-  ['.h++'] = '.c++',
-  ['.H'] = '.C',
+  ['c'] = {
+    ['.h'] = '.c'
+    ['.hh'] = '.cc',
+    ['.H'] = '.C',
+  },
+  ['cpp'] = {
+    ['.hpp'] = '.cpp',
+    ['.h'] = '.cpp',
+    ['.h++'] = '.c++',
+    ['.hxx'] = '.cxx',
+  }
 }
 
 -- TODO: Let the user choose where to store the 
@@ -23,27 +29,39 @@ local exension_index = {
 local source_dir_names = { 'source', 'src' }
 local include_dir_names = { 'include', 'inc' }
 
-local function isValidPath(path)
+function M.is_path_valid(path)
   return vim.fn.filereadable(path) ~= 0
 end
 
-local function base_dirname(path)
-  path = fs.dirname(path)
-  return path and fs.basename(path) or nil
+---@param path (string)
+---@return (string) ext
+function M.get_ext(path)
+  return path:match("(%w+)(%.[^%.]+)$")
+end
+
+---@param path (string)
+---@param ext (string)
+function M.change_ext(path, ext)
+  return string.gsub(path, M.get_ext(path), ext)
+end
+
+function M.base_dirname(path)
+  path = M.fs.dirname(path)
+  return path and M.fs.basename(path) or nil
 end
 
 ---This function will attempt to retrieve
 ---@param path (string | nil)
 ---@param height (integer)
 ---@return (string | nil) modified_path
-local function M.get_parent_dir(path, height)
+function M.get_parent_dir(path, height)
   height = height and height or 1
   if path == nil then
      return nil
   end
-  path = fs.normalize(path)
+  path = M.fs.normalize(path)
   for _ = 1, height do
-    path = fs.dirname(path)
+    path = M.fs.dirname(path)
   end
   return path
 end
@@ -73,7 +91,7 @@ local function attempt_to_get_source_dir(headerfile_path)
   assert(headerfile_path ~= '',
     "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is empty"
   )
-  assert(isValidPath(headerfile_path),
+  assert(M.is_path_valid(headerfile_path),
     "ERROR (at line:" .. debug.getinfo(1).currentline .. "): headerfile_path is not a valid path"
   )
 
@@ -83,7 +101,7 @@ local function attempt_to_get_source_dir(headerfile_path)
   --- TODO: let user choose which source dir to save the source file
   local stopDir = M.get_parent_dir(currentDir, 2)
   stopDir = helper.default_if_nil(currentDir, stopDir)
-  local source_dir_paths = fs.find(source_dir_names, {
+  local source_dir_paths = M.fs.find(source_dir_names, {
     path    = headerfile_path,
     upward  = true,
     -- set stop to currentDir if currentDir has no parents
@@ -108,16 +126,15 @@ end
 ---This function
 function M.get_sourcefile_equivalence(headerfile_path)
   headerfile_path = M.fs.normalize(headerfile_path)
-  local headerfile_name = M.fs.basename(headerfile)
-  local currentDir      = M.fs.dirname(headerfile_path)
+  local headerfile_name     = M.fs.basename(headerfile_path)
   --- %. match a literal period;
   --- ([^%.]+)$ matches one or more characters that are not periods.
   --- This captures the extension characters. and anchor the pattern 
   --- to the end of the string
-  local headerfile_ext  = headerfile_path:match("(%.[^%.]+)$")
+  local headerfile_ext = M.get_ext(headerfile_name)
   --- TODO: change the default nil value to support both c and cpp
-  headerfile_ext = headerfile_ext and headerfile_ext or ".hpp"
-  local sourcefile_ext = exension_index[headerfile_ext]
+  local lang = config.get_key_value('lang')
+  local sourcefile_ext = exension_index[lang][headerfile_ext]
   assert(sourcefile_ext, "Error: unsupported header extension " .. headerfile_ext)
 
   local sourcefile_name = string.gsub(headerfile_name, headerfile_ext, sourcefile_ext)
@@ -128,9 +145,6 @@ function M.get_sourcefile_equivalence(headerfile_path)
 
   print(sourcefile_path)
   -- local directory = base_dirname(source_path)
-  -- if directory == nil then
-  --   return source_path
-  -- end
   -- for i = 1, #include_dir_names do
   --   if include_dir_names[string.lower(directory)] then
   --     source_path = attempt_to_get_source_dir(source_path)
@@ -140,6 +154,7 @@ function M.get_sourcefile_equivalence(headerfile_path)
   -- return source_path
 end
 
+---@param path (string)
 function M.open_file_in_buffer(path)
   api.nvim_command('e ' .. path)
   local bufnr = api.nvim_get_current_buf()

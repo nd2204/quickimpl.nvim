@@ -106,9 +106,9 @@ function M.define_methods(namespaces)
     end
   end
 
-  local fd = qfs.fs_open(path, 'a', 438)
-  qfs.fs_write(fd, strings, 0)
-  qfs.fs_close(fd)
+  local fd = assert(uv.fs_open(path, 'a', 438))
+  uv.fs_write(fd, strings, 0)
+  uv.fs_close(fd)
 
   -- It is neccessary to reload the buffer because
   -- in some cases Neovim doesn't render the newly
