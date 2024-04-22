@@ -3,6 +3,7 @@ local M = {}
 local api = vim.api
 local ts = vim.treesitter
 local ts_util = require('quickimpl.treesitter')
+local debug = ts_util.debug
 -- local uv = vim.loop
 
 --------------------------------------------------------------------------------
@@ -24,19 +25,44 @@ M.opts = {
   end,
 }
 
-
-local class_query = [[
+local ns_class_query = [[
 (namespace_definition
 	name: (namespace_identifier) @name
     body: (declaration_list
     	(class_specifier) @ns_class))
+]]
 
-((class_specifier) @class)
+local class_query = [[
+  ((class_specifier) @class)
+]]
 
+local function_query = [[
 (declaration
 	type: [(type_identifier) (primitive_type)] @type
 	declarator: (function_declarator) @declarator)
 ]]
+
+local constructor_query = [[
+
+]]
+
+local destructor_query = [[
+
+]]
+
+---@return table
+local function parse_function(node)
+  local parsed = {}
+  local captured = ts_util.get_query_capture(node, 'cpp', function_query)
+  for n in captured do
+    parsed[n:type()] = ts_util.ts.get_node_text(n, 0)
+  end
+  return parsed
+end
+
+local function parse_ns_class()
+end
+
 --------------------------------------------------------------------------------
 --- Local functions
 --------------------------------------------------------------------------------
@@ -48,7 +74,12 @@ function M.callback(params)
   local parser = ts.get_parser()
   local root = parser:parse()[1]:root()
 
-  ts_util.debug.print_node_sexpr(root)
+  local captured = ts_util.get_query_capture(root, 'cpp', ns_class_query)
+  for node in captured do
+    -- debug.print_node_sexpr(node)
+    print(vim.treesitter.get_node_text(node, 0))
+    print('')
+  end
 
   -- local header = require('quickimpl.header')
   -- local source = require('quickimpl.source')

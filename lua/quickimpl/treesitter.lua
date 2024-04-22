@@ -81,22 +81,25 @@ function M.declarator_identifier(declarator)
   return nil
 end
 
----@param root (TSNode)
+---@param node (TSNode)
 ---@param lang (string)
 ---@param query (string)
----@return table<TSNode, table> captured
-function M.get_query_capture(root, lang, query)
+---@return table<TSNode> captured
+function M.get_query_capture(node, lang, query)
   local parsed = ts.query.parse(lang, query)
   local captured = {}
-  for _, node, _ in parsed:iter_captures(root, 0, root:start()) do
-    captured[node] = {}
+  for _, _node, _ in parsed:iter_captures(node, 0, node:start()) do
+    table.insert(captured, _node)
   end
   return captured
 end
 
+M.debug = {}
+
 ---@param node (TSNode)
 function M.debug.print_node_sexpr(node)
-  print(node:sexpr())
+  local sexpr = assert(node:sexpr(), 'node is nil')
+  print(sexpr)
 end
 
 return M
