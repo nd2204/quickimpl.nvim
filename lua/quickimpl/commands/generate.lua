@@ -25,43 +25,17 @@ M.opts = {
   end,
 }
 
-local ns_class_query = [[
-(namespace_definition
-	name: (namespace_identifier) @name
-    body: (declaration_list
-    	(class_specifier) @ns_class))
-]]
-
-local class_query = [[
-  ((class_specifier) @class)
-]]
-
-local function_query = [[
-(declaration
-	type: [(type_identifier) (primitive_type)] @type
-	declarator: (function_declarator) @declarator)
-]]
-
-local constructor_query = [[
-
-]]
-
-local destructor_query = [[
-
-]]
-
----@return table
-local function parse_function(node)
-  local parsed = {}
-  local captured = ts_util.get_query_capture(node, 'cpp', function_query)
-  for n in captured do
-    parsed[n:type()] = ts_util.ts.get_node_text(n, 0)
-  end
-  return parsed
-end
-
-local function parse_ns_class()
-end
+-- local function parse_function(node)
+--   local parsed = {}
+--   local functions = ts_util.get_query_capture(node, 'cpp', method_query)
+--   for i = 1, #functions do
+--     table.insert(parsed, i, {
+--       type = ts.get_node_text(functions[capture_names.func_typename], 0),
+--       decl = ts.get_node_text(functions[capture_names.func_decl], 0)
+--     })
+--   end
+--   vim.print(parsed)
+-- end
 
 --------------------------------------------------------------------------------
 --- Local functions
@@ -74,12 +48,13 @@ function M.callback(params)
   local parser = ts.get_parser()
   local root = parser:parse()[1]:root()
 
-  local captured = ts_util.get_query_capture(root, 'cpp', ns_class_query)
-  for node in captured do
-    -- debug.print_node_sexpr(node)
-    print(vim.treesitter.get_node_text(node, 0))
-    print('')
+  local query = NamespaceQuery.new()
+  local namespaces = query:get_query_capture(root, 'cpp')
+  for i = 1, #namespaces do
+    vim.print(string.format("[%d/%d]", i, #namespaces))
+    vim.print(namespaces[i]['ns_decl_list']:sexpr())
   end
+
 
   -- local header = require('quickimpl.header')
   -- local source = require('quickimpl.source')
