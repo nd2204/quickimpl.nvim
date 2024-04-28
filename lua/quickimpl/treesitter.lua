@@ -196,6 +196,32 @@ function M.declarator_identifier(declarator)
   return nil
 end
 
+function M.is_declaration(node)
+  local names = { "field_declaration", "declaration" }
+  for i = 1, #names do
+    if names[i] == node:type() then
+      return true
+    end
+  end
+  return false
+end
+
+function M.get_cursor_declaration()
+  local node = ts.get_node()
+  while node ~= nil and not M.is_declaration(node) do
+    node = node:parent()
+  end
+  return node
+end
+
+function M.get_cursor_class()
+  local node = ts.get_node()
+  while node ~= nil and node:type() ~= 'class_specifier' do
+    node = node:parent()
+  end
+  return node
+end
+
 ---@param node (TSNode)
 ---@param lang (string)
 ---@param query (string)

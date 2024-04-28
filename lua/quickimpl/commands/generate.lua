@@ -25,17 +25,27 @@ M.opts = {
   end,
 }
 
--- local function parse_function(node)
---   local parsed = {}
---   local functions = ts_util.get_query_capture(node, 'cpp', method_query)
---   for i = 1, #functions do
---     table.insert(parsed, i, {
---       type = ts.get_node_text(functions[capture_names.func_typename], 0),
---       decl = ts.get_node_text(functions[capture_names.func_decl], 0)
---     })
---   end
---   vim.print(parsed)
--- end
+local function_blacklist = {
+  ['static'] = true,
+  ['number_literal'] = true,
+}
+
+local function is_function_blacklisted(type, text)
+  return function_blacklist[type] or function_blacklist[text]
+end
+
+---@param node (TSNode)
+local function parse_function(node)
+  local parsed = {}
+  local type, node_txt
+  for child in node:iter_children() do
+    type = child:type()
+    node_txt = ts.get_node_text(child, 0)
+    if is_function_blacklisted(type, node_txt) then return nil end
+    if child:named() then table.insert(parsed, node_txt) end
+  end
+  return parsed
+end
 
 --------------------------------------------------------------------------------
 --- Local functions
@@ -48,12 +58,22 @@ function M.callback(params)
   local parser = ts.get_parser()
   local root = parser:parse()[1]:root()
 
-  local query = NamespaceQuery.new()
-  local namespaces = query:get_query_capture(root, 'cpp')
-  for i = 1, #namespaces do
-    vim.print(string.format("[%d/%d]", i, #namespaces))
-    vim.print(namespaces[i]['ns_decl_list']:sexpr())
-  end
+  local node = assert(ts_util.get_cursor_declaration())
+  vim.print(parse_function(node))
+
+  -- vim.print(ts.get_captures_at_cursor())
+  -- local query = NamespaceQuery.new('ns_name', 'ns_decl_list', 'ns')
+  -- local namespaces = query:get_query_capture(root, 'cpp')
+  -- for i = 1, #namespaces do
+  --   vim.print(string.format("[%d/%d]", i, #namespaces))
+  --   local decl = namespaces[i]['ns_decl_list']
+  --   vim.print(decl:sexpr())
+  --   for child in decl:iter_children() do
+  --     if child:type() == 'class_specifier' then
+  --       vim.print(ts.get_node_text(child, 0))
+  --     end
+  --   end
+  -- end
 
 
   -- local header = require('quickimpl.header')
