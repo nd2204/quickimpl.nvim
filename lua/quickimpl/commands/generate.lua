@@ -3,49 +3,24 @@ local M = {}
 local api = vim.api
 local ts = vim.treesitter
 local ts_util = require('quickimpl.treesitter')
-local debug = ts_util.debug
+local FunctionDeclaration = require("quickimpl.util.treesitter.function")
+ts_util.highlight_node = require("quickimpl.util.treesitter.node").highlight_node
 -- local uv = vim.loop
 
 --------------------------------------------------------------------------------
 --- Class Properties
 --------------------------------------------------------------------------------
-local supported_args = {
- 'definition', 'prototype'
-}
-
 M.name = 'QIGenerate'
 
 M.opts = {
   bang = false,
   bar = false,
-  nargs = 1,
+  nargs = 0,
   addr = 'other',
-  complete = function()
-    return supported_args
-  end,
+  -- complete = function()
+  --   return supported_args
+  -- end,
 }
-
-local function_blacklist = {
-  ['static'] = true,
-  ['number_literal'] = true,
-}
-
-local function is_function_blacklisted(type, text)
-  return function_blacklist[type] or function_blacklist[text]
-end
-
----@param node (TSNode)
-local function parse_function(node)
-  local parsed = {}
-  local type, node_txt
-  for child in node:iter_children() do
-    type = child:type()
-    node_txt = ts.get_node_text(child, 0)
-    if is_function_blacklisted(type, node_txt) then return nil end
-    if child:named() then table.insert(parsed, node_txt) end
-  end
-  return parsed
-end
 
 --------------------------------------------------------------------------------
 --- Local functions
@@ -58,32 +33,45 @@ function M.callback(params)
   local parser = ts.get_parser()
   local root = parser:parse()[1]:root()
 
-  local node = assert(ts_util.get_cursor_declaration())
-  vim.print(parse_function(node))
+  local group = vim.api.nvim_create_augroup('quickimpl/treesitter', {})
+  local ns = vim.api.nvim_create_namespace('quickimpl-highlight')
+  local cursor_node = ts_util.get_cursor_class_or_function()
+  if cursor_node then
+    ts_util.highlight_node(cursor_node, ns)
+  end
+  local function_declaration = FunctionDeclaration.new(cursor_node)
+  vim.print(function_declaration:define())
 
-  -- vim.print(ts.get_captures_at_cursor())
-  -- local query = NamespaceQuery.new('ns_name', 'ns_decl_list', 'ns')
-  -- local namespaces = query:get_query_capture(root, 'cpp')
-  -- for i = 1, #namespaces do
-  --   vim.print(string.format("[%d/%d]", i, #namespaces))
-  --   local decl = namespaces[i]['ns_decl_list']
-  --   vim.print(decl:sexpr())
-  --   for child in decl:iter_children() do
-  --     if child:type() == 'class_specifier' then
-  --       vim.print(ts.get_node_text(child, 0))
-  --     end
+  -- local id = vim.api.nvim_create_autocmd('CursorMoved', {
+  --   group = group,
+  --   buffer = 0,
+  --   callback = function()
+  --     cursor_node = ts_util.get_cursor_class_or_function()
+  --     if cursor_node == nil then return end
+  --     ts_util.highlight_node(cursor_node, ns)
+  --     -- print(cursor_node:type())
+  --   end,
+  -- })
+
+  -- vim.api.nvim_buf_set_keymap(0, "n", "<ESC>", "",{
+  --   desc = "Cancel selection",
+  --   callback = function()
+  --     vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+  --     vim.api.nvim_del_autocmd(id)
+  --     vim.api.nvim_buf_del_keymap(0, "n", "<ESC>")
   --   end
-  -- end
+  -- })
 
+  -- vim.api.nvim_buf_set_keymap(0, "n", "<CR>", "",{
+  --   desc = "Confirm declarable selection",
+  --   callback = function()
+  --     if cursor_node == nil then return end
 
-  -- local header = require('quickimpl.header')
-  -- local source = require('quickimpl.source')
-  -- print(root:sexpr())
-  -- if params[1] == supported_args[1]  then
-  --   local namespaces = header.get_declarations(root)
-  --   source.insert_header(path)
-  --   source.define_methods(namespaces)
-  -- end
-end
+  --     vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+  --     vim.api.nvim_del_autocmd(id)
+  --     vim.api.nvim_buf_del_keymap(0, "n", "<CR>")
+  --   end
+  -- })
+  end
 
-return M
+  return M
