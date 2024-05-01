@@ -69,6 +69,11 @@ M.is_valid_func_node = function(node)
     end,
     ['field_declaration'] = M.has_child_func_decl,
     ['declaration'] = M.has_child_func_decl,
+    ['friend_declaration'] = function(_node)
+      for child in _node:iter_children() do
+        if M.has_child_func_decl(child) then return true end
+      end
+    end
   }
   local type = node:type()
   return valid_type[type] ~= nil and valid_type[type](node)

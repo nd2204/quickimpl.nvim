@@ -67,7 +67,7 @@ M.callback = function(params)
   local cursor_node = get_cursor()
   local decl = DeclarationFactory(cursor_node)
   if not decl then return end
-  ts_util.highlight_node(decl:get_node(), ns)
+  ts_util.highlight_node(cursor_node, ns)
   vim.print(decl:define())
 
   -- local id = vim.api.nvim_create_autocmd('CursorMoved', {
