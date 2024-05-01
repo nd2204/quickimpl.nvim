@@ -24,8 +24,6 @@ local exension_index = {
   }
 }
 
--- TODO: Let the user choose where to store the 
--- generated definitions in config.lua
 local source_dir_names = { 'source', 'src' }
 local include_dir_names = { 'include', 'inc' }
 
