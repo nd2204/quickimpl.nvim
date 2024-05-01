@@ -10,21 +10,29 @@ FuncNode.__index = FuncNode
 setmetatable(FuncNode, Node)
 
 FuncNode.new = function(node)
-  local instance = setmetatable({}, FuncNode)
+  local self = setmetatable({}, FuncNode)
   if not ts_util.is_valid_func_node(node) then return nil end
-  instance.node = node
+  self.node = node
   if node:type() == 'template_declaration' then
-    instance.node = assert(ts_util.first_child_with_types(
+    self.node = assert(ts_util.first_child_with_types(
       {'declaration', 'field_declaration'},
       node))
-    instance.template_params = ts_util.first_child_with_type(
+    self.template_params = ts_util.first_child_with_type(
       'template_parameter_list',
       node
     )
   end
-  instance.parent_class = ts_util.first_parent_with_type('class_specifier', node)
-  instance.children = ts_util.get_all_child(instance.node)
-  return instance
+  if node:type() == 'friend_declaration' then
+    self.node = assert(ts_util.first_child_with_types(
+      {'declaration', 'field_declaration'},
+      node))
+  end
+
+  if not ts_util.first_parent_with_type('friend_declaration', self.node) then
+    self.parent_class = ts_util.first_parent_with_type('class_specifier', self.node)
+  end
+  self.children = ts_util.get_all_child(self.node)
+  return self
 end
 
 ---@return TSNode | nil
