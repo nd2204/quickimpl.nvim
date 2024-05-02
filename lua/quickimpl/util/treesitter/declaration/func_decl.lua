@@ -2,6 +2,8 @@ local config = require "quickimpl.config"
 local ClassNode = require "quickimpl.util.treesitter.node.class_node"
 local FuncNode = require "quickimpl.util.treesitter.node.func_node"
 
+-------------------------------------------------------------------------------
+
 ---@class FunctionDeclaration
 ---return type of the function. empty if it is a constructor or destructor
 ---Example: int, void, float
@@ -16,6 +18,8 @@ local FuncNode = require "quickimpl.util.treesitter.node.func_node"
 ---@field funcNode FuncNode | nil
 local FunctionDeclaration = {}
 FunctionDeclaration.__index = FunctionDeclaration
+
+-------------------------------------------------------------------------------
 
 FunctionDeclaration.new = function(node)
   local instance = setmetatable({}, FunctionDeclaration)
@@ -44,18 +48,6 @@ function FunctionDeclaration:set_class(class)
   self.class = class..'::'
 end
 
----Debugging function
--- function FunctionDeclaration:print()
---   vim.print(string.format(
---     "template:%s\nscs:%s\ntype:%s\nclass:%s\ndeclarator:%s",
---     self.template,
---     self.scs,
---     self.type,
---     self.class,
---     self.declarator)
---   )
--- end
-
 ---@return table<string>
 function FunctionDeclaration:define()
   local brace_pattern = config.get_key_value('brace_pattern')
@@ -75,5 +67,7 @@ end
 function FunctionDeclaration:get_node()
   return self.funcNode:get_node()
 end
+
+-------------------------------------------------------------------------------
 
 return FunctionDeclaration

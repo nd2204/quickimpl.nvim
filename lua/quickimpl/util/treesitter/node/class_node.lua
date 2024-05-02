@@ -1,5 +1,26 @@
 local ts = vim.treesitter
 local ts_util = require("quickimpl.util.treesitter")
+local FuncNode = require "quickimpl.util.treesitter.node.func_node"
+
+-------------------------------------------------------------------------------
+local has_child_class = function(node)
+  for child in node:iter_children() do
+    if child:type() == 'class_specifier' then return true end
+  end
+  return false
+end
+
+local is_valid_class_node = function(node)
+  if node == nil then return false end
+  local valid_type = {
+    ['template_declaration'] = has_child_class,
+    ['class_specifier'] = function() return true end
+  }
+  local type = node:type()
+  return valid_type[type] ~= nil and valid_type[type](node)
+end
+
+-------------------------------------------------------------------------------
 
 ---@class ClassNode
 ---@field node TSNode
@@ -8,7 +29,7 @@ ClassNode.__index = ClassNode
 
 ClassNode.new = function(node)
   local instance = setmetatable({}, ClassNode)
-  if not ts_util.is_valid_class_node(node) then return nil end
+  if not is_valid_class_node(node) then return nil end
   instance.node = node
   return instance
 end
@@ -30,7 +51,8 @@ function ClassNode:iter_func_decl()
     self.node)
   if declaration_list == nil then return ipairs({}) end
   for child in declaration_list:iter_children() do
-    if ts_util.is_valid_func_node(child) then
+    local func_node = FuncNode.new(child)
+    if func_node then
       table.insert(function_declarations, child)
     end
   end

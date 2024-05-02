@@ -1,11 +1,15 @@
 local ClassNode = require "quickimpl.util.treesitter.node.class_node"
 local FuncDecl = require "quickimpl.util.treesitter.declaration.func_decl"
 
+-------------------------------------------------------------------------------
+
 ---@class ClassDeclaration
 ---@field classNode ClassNode | nil
 ---@field function_list table<FunctionDeclaration>
 local ClassDeclaration = {}
 ClassDeclaration.__index = ClassDeclaration
+
+-------------------------------------------------------------------------------
 
 ClassDeclaration.new = function(node)
   local instance = setmetatable({}, ClassDeclaration)
@@ -29,8 +33,8 @@ end
 ---@return table
 function ClassDeclaration:define()
   local definitions_list = {}
-  for _, v in pairs(self.function_list) do
-    table.insert(definitions_list, v:define())
+  for _, func_decl in pairs(self.function_list) do
+    table.insert(definitions_list, func_decl:define()[1])
   end
   return definitions_list
 end
@@ -38,5 +42,7 @@ end
 function ClassDeclaration:get_node()
   return self.classNode:get_node()
 end
+
+-------------------------------------------------------------------------------
 
 return ClassDeclaration

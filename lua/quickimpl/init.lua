@@ -7,14 +7,23 @@ require('quickimpl.commands')
 --------------------------------------------------------------------------------
 M.setup = require('quickimpl.config').setup
 
+local lazy_ok, lazy = pcall(require, "lazy.core.loader")
+
 vim.api.nvim_create_user_command("QIReload", function()
   package.loaded.quickimpl = nil
-  vim.print("RELOADING quickimpl")
   require("quickimpl")
-  if package.loaded.quickimpl then
-    vim.print("RELOADED quickimpl")
+  if lazy_ok then
+    vim.print("RELOADING quickimpl")
+    lazy.reload("quickimpl.nvim")
+    vim.print("RELOADED quickimpl.nvim")
   else
-    vim.print("Unable to reload quickimpl")
+    vim.print("RELOADING quickimpl")
+    for name, _ in pairs(package.loaded) do
+      if vim.startswith(name, 'quickimpl') then
+        package.loaded[name] = nil
+      end
+    end
+    vim.print("RELOADED quickimpl.nvim")
   end
 end, {})
 
