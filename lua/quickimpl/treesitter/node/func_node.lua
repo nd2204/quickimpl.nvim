@@ -1,19 +1,21 @@
-local ts_util = require("quickimpl.util.treesitter")
+local ts_util = require "quickimpl.treesitter"
+local TemplateNode = require "quickimpl.treesitter.node.template_node"
 local ts = vim.treesitter
+local Type = require "quickimpl.treesitter.node.cpp_type"
 
 -------------------------------------------------------------------------------
 
 ---Check if the declaration is a function declaration
 local has_child_func_decl = function(node)
   for child in node:iter_children() do
-    if child:type() == 'function_declarator' then return true end
+    if child:type() == Type.FUNCTION_DECLARATOR then return true end
   end
   return false
 end
 
 local is_pure_virtual = function(node)
   for child in node:iter_children() do
-    if child:type() == 'number_literal' then return true end
+    if child:type() == Type.NUMBER_LITERAL then return true end
   end
   return false
 end
@@ -21,18 +23,18 @@ end
 local is_valid_func_node = function(node)
   if node == nil then return false end
   local valid_type = {
-    ['template_declaration'] = function(_node)
+    [Type.TEMPLATE_DECLARATION] = function(_node)
       for child in _node:iter_children() do
         if has_child_func_decl(child) then return true end
       end
     end,
-    ['field_declaration'] = function(_node)
+    [Type.FIELD_DECLARATION] = function(_node)
       return has_child_func_decl(_node) and not is_pure_virtual(_node)
     end,
-    ['declaration'] = function(_node)
+    [Type.DECLARATION] = function(_node)
       return has_child_func_decl(_node) and not is_pure_virtual(_node)
     end,
-    ['friend_declaration'] = function(_node)
+    [Type.FRIEND_DECLARATION] = function(_node)
       for child in _node:iter_children() do
         if has_child_func_decl(child) then return true end
       end
@@ -46,9 +48,9 @@ end
 
 ---@class FuncNode
 ---@field parent_class (TSNode|nil)
----@field template_params (TSNode|nil)
+---@field template (TemplateNode|nil)
 ---@field children (TSNode|nil)
----@field node (TSNode|nil)
+---@field node (TSNode)
 local FuncNode = {}
 FuncNode.__index = FuncNode
 
@@ -59,25 +61,32 @@ FuncNode.new = function(node)
   if not is_valid_func_node(node) then return nil end
   self.node = node
 
-  if node:type() == 'template_declaration' then
+  --- init template node
+  local parent = ts_util.search_parent_with_type(Type.TEMPLATE_DECLARATION, node, 1)
+  self.template = parent and TemplateNode.new(parent) or TemplateNode.new(node)
+
+  --- check if node is a template node if true then find
+  --- the actual function node and reassign the node field
+  if self.template then
     self.node = assert(ts_util.first_child_with_types(
-      {'declaration', 'field_declaration'},
-      node))
-    self.template_params = ts_util.first_child_with_type(
-      'template_parameter_list',
-      node
-    )
+      {Type.DECLARATION, Type.FIELD_DECLARATION, Type.FRIEND_DECLARATION},
+      self.template:get_node()))
   end
 
-  if node:type() == 'friend_declaration' then
+  --- do the same if the node is a friend node
+  if self.node:type() == Type.FRIEND_DECLARATION
+       or node:type() == Type.FRIEND_DECLARATION
+  then
     self.node = assert(ts_util.first_child_with_types(
-      {'declaration', 'field_declaration'},
-      node))
+      {Type.DECLARATION, Type.FIELD_DECLARATION},
+      self.node))
   end
 
-  if not ts_util.first_parent_with_type('friend_declaration', self.node) then
-    self.parent_class = ts_util.first_parent_with_type('class_specifier', self.node)
+  --- don't assign a class to the function if it is a friend
+  if not ts_util.first_parent_with_type(Type.FRIEND_DECLARATION, self.node) then
+    self.parent_class = ts_util.first_parent_with_type(Type.CLASS_SPECIFIER, self.node)
   end
+
   self.children = ts_util.get_all_child(self.node)
   return self
 end
@@ -87,43 +96,40 @@ function FuncNode:get_parent_class()
   return self.parent_class
 end
 
----@return string
-function FuncNode:get_template_params()
-  if not self.template_params then return '' end
-  local template_str = 'template'..ts.get_node_text(self.template_params, 0)..'\n'
-  return template_str 
+---@return (TemplateNode|nil)
+function FuncNode:get_template()
+  return self.template
 end
 
 ---@return string
 function FuncNode:get_type()
-  local type = self.children['type_identifier']
-  type = type and type or self.children['primitive_type']
+  local type = self.children[Type.TYPE_IDENTIFIER]
+  type = type and type or self.children[Type.PRIMITIVE_TYPE]
   local type_str = type and ts.get_node_text(type, 0)..' ' or ''
   return  type_str
 end
 
 ---@return string
 function FuncNode:get_storage_class_specifier()
-  local scs_node = self.children['storage_class_specifier']
+  local scs_node = self.children[Type.STORAGE_CLASS_SPECIFIER]
   if not scs_node then return '' end
-  return ts.get_node_text(scs_node, 0)..' '
+  local scs = ts.get_node_text(scs_node, 0)..' '
+  if string.gsub(scs, "%s+", "") == 'static' then
+    self.scs = ''
+  end
+  return scs
 end
 
 ---@return string
 function FuncNode:get_declarator()
-  local declarator_node = self.children['function_declarator']
+  local declarator_node = self.children[Type.FUNCTION_DECLARATOR]
   if not declarator_node then return '' end
   return ts.get_node_text(declarator_node, 0)..' '
 end
 
----@return table<string,TSNode>
-function FuncNode:get_children()
-  return self.children
-end
-
 ---@return TSNode
 function FuncNode:get_node()
-  return self.node
+  return self.template and self.template:get_node() or self.node
 end
 
 -------------------------------------------------------------------------------

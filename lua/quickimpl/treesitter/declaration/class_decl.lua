@@ -1,5 +1,5 @@
-local ClassNode = require "quickimpl.util.treesitter.node.class_node"
-local FuncDecl = require "quickimpl.util.treesitter.declaration.func_decl"
+local ClassNode = require "quickimpl.treesitter.node.class_node"
+local FuncDecl = require "quickimpl.treesitter.declaration.func_decl"
 
 -------------------------------------------------------------------------------
 
@@ -39,8 +39,14 @@ function ClassDeclaration:define()
   return definitions_list
 end
 
+---@return TSNode
 function ClassDeclaration:get_node()
   return self.classNode:get_node()
+end
+
+---@return string
+function ClassDeclaration:get_type()
+  return "class"
 end
 
 -------------------------------------------------------------------------------

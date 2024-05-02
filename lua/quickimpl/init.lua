@@ -13,18 +13,17 @@ vim.api.nvim_create_user_command("QIReload", function()
   package.loaded.quickimpl = nil
   require("quickimpl")
   if lazy_ok then
-    vim.print("RELOADING quickimpl")
     lazy.reload("quickimpl.nvim")
-    vim.print("RELOADED quickimpl.nvim")
   else
-    vim.print("RELOADING quickimpl")
     for name, _ in pairs(package.loaded) do
       if vim.startswith(name, 'quickimpl') then
         package.loaded[name] = nil
       end
     end
-    vim.print("RELOADED quickimpl.nvim")
   end
 end, {})
+
+vim.keymap.set("n", "<leader>r", "<CMD>QIReload<CR>", {desc = "Reload Quickimpl"})
+vim.keymap.set("n", "<leader>g", "<CMD>QIGenerate<CR>", {desc = "Generate implementation"})
 
 return M

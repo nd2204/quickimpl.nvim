@@ -1,10 +1,10 @@
 local ts          = vim.treesitter
-local ts_util     = require "quickimpl.util.treesitter"
+local ts_util     = require "quickimpl.treesitter"
 
 --------------------------------------------------------------------------------
 
-local FuncDecl  = require "quickimpl.util.treesitter.declaration.func_decl"
-local ClassDecl = require "quickimpl.util.treesitter.declaration.class_decl"
+local FuncDecl  = require "quickimpl.treesitter.declaration.func_decl"
+local ClassDecl = require "quickimpl.treesitter.declaration.class_decl"
 local declaration_classes = { FuncDecl, ClassDecl }
 --- redefine DeclFactory because of dependencies loop
 local DeclFactory = function(node)
@@ -67,6 +67,10 @@ function NamespaceDeclaration:define()
     ..declaration
     .."\n}\n\n",
   }
+end
+
+function NamespaceDeclaration:get_type()
+  return 'namespace'
 end
 
 -------------------------------------------------------------------------------

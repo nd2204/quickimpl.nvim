@@ -1,6 +1,6 @@
-local FuncDecl  = require "quickimpl.util.treesitter.declaration.func_decl"
-local ClassDecl = require "quickimpl.util.treesitter.declaration.class_decl"
-local NsDecl    = require "quickimpl.util.treesitter.declaration.ns_decl"
+local FuncDecl  = require "quickimpl.treesitter.declaration.func_decl"
+local ClassDecl = require "quickimpl.treesitter.declaration.class_decl"
+local NsDecl    = require "quickimpl.treesitter.declaration.ns_decl"
 
 --------------------------------------------------------------------------------
 

@@ -1,0 +1,15 @@
+return {
+  TEMPLATE_DECLARATION        = 'template_declaration',
+  FUNCTION_DECLARATOR         = 'function_declarator',
+  DECLARATION                 = 'declaration',
+  FIELD_DECLARATION           = 'field_declaration',
+  FRIEND_DECLARATION          = 'friend_declaration',
+  TYPE_IDENTIFIER             = 'type_identifier',
+  TYPE_PARAMETER_DECLARATION  = 'type_parameter_declaration',
+  PRIMITIVE_TYPE              = 'primitive_type',
+  NUMBER_LITERAL              = 'number_literal',
+  STORAGE_CLASS_SPECIFIER     = 'storage_class_specifier',
+  CLASS_SPECIFIER             = 'class_specifier',
+  FIELD_DECLARATION_LIST      = 'field_declaration_list',
+  TEMPLATE_PARAMETER_LIST     = 'template_parameter_list',
+}

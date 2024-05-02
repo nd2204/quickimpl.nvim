@@ -1,8 +1,8 @@
 local api = vim.api
 local ts = vim.treesitter
-local ts_util = require "quickimpl.util.treesitter"
-local QIBuffer = require "quickimpl.util.buffer"
-local DeclarationFactory = require "quickimpl.util.treesitter.declaration.decl_factory"
+local ts_util = require "quickimpl.treesitter"
+local QIBuffer = require "quickimpl.io.buffer"
+local DeclarationFactory = require "quickimpl.treesitter.declaration.decl_factory"
 
 local M = {}
 --------------------------------------------------------------------------------
@@ -26,8 +26,7 @@ M.opts = {
 
 local get_cursor = function()
   local node = ts.get_node()
-  while node ~= nil and not (DeclarationFactory(node))
-    do
+  while node ~= nil and not (DeclarationFactory(node)) do
     node = node:parent()
   end
   return node
@@ -47,7 +46,8 @@ M.callback = function(params)
   local cursor_node = get_cursor()
   local decl = DeclarationFactory(cursor_node)
   if not decl then return end
-  ts_util.highlight_node(decl:get_node(), ns)
+
+  ts_util.highlight_node(cursor_node, ns, decl:get_type())
   vim.print(decl:define())
 
   local id = vim.api.nvim_create_autocmd('CursorMoved', {
@@ -57,7 +57,7 @@ M.callback = function(params)
       cursor_node = get_cursor()
       decl = DeclarationFactory(cursor_node)
       if not decl then return end
-      ts_util.highlight_node(decl:get_node(), ns)
+      ts_util.highlight_node(cursor_node, ns, decl:get_type())
     end,
   })
 

@@ -1,6 +1,6 @@
 local config = require "quickimpl.config"
-local ClassNode = require "quickimpl.util.treesitter.node.class_node"
-local FuncNode = require "quickimpl.util.treesitter.node.func_node"
+local ClassNode = require "quickimpl.treesitter.node.class_node"
+local FuncNode = require "quickimpl.treesitter.node.func_node"
 
 -------------------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ local FuncNode = require "quickimpl.util.treesitter.node.func_node"
 ---the identifer (name) and parameter list of the function.
 ---@field declarator string
 ---the template declaration of the function.
+---@field class string
 ---@field template string
 ---@field funcNode FuncNode | nil
 local FunctionDeclaration = {}
@@ -22,30 +23,31 @@ FunctionDeclaration.__index = FunctionDeclaration
 -------------------------------------------------------------------------------
 
 FunctionDeclaration.new = function(node)
-  local instance = setmetatable({}, FunctionDeclaration)
+  local self = setmetatable({}, FunctionDeclaration)
 
-  instance.funcNode = FuncNode.new(node)
-  if not instance.funcNode then return nil end
+  self.funcNode = FuncNode.new(node)
+  if not self.funcNode then return nil end
 
-  instance.type = instance.funcNode:get_type()
-  instance.scs = instance.funcNode:get_storage_class_specifier()
-  if string.gsub(instance.scs, "%s+", "") == 'static' then
-    instance.scs = ''
-  end
-  instance.declarator = instance.funcNode:get_declarator()
-  instance.template = instance.funcNode:get_template_params()
+  self.type = self.funcNode:get_type()
+  self.scs = self.funcNode:get_storage_class_specifier()
+  self.declarator = self.funcNode:get_declarator()
 
-  instance.class = ''
-  local class_node = ClassNode.new(instance.funcNode:get_parent_class())
+  local template_function_node = self.funcNode:get_template()
+  self.template = template_function_node
+    and 'template'..template_function_node:get_param_list()..'\n'
+    or ''
+
+  self.class = ''
+  local class_node = ClassNode.new(self.funcNode:get_parent_class())
   if class_node then
-    instance:set_class(class_node:get_identifier())
+    local template_class_node = class_node:get_template()
+    self.class = self.class..class_node:get_identifier()
+    if template_class_node then
+      self.class = self.class..template_class_node:get_arg_list()
+    end
+    self.class = self.class..'::'
   end
-  return instance
-end
-
----@param class string
-function FunctionDeclaration:set_class(class)
-  self.class = class..'::'
+  return self
 end
 
 ---@return table<string>
@@ -66,6 +68,13 @@ end
 ---@return TSNode
 function FunctionDeclaration:get_node()
   return self.funcNode:get_node()
+end
+
+function FunctionDeclaration:get_type()
+  if self.class ~= '' then
+    return 'method'
+  end
+  return 'function'
 end
 
 -------------------------------------------------------------------------------
