@@ -44,6 +44,23 @@ M.first_child_with_type = function(type, node)
   return nil
 end
 
+---Search for children node with matching type
+---@return (TSNode|nil)
+---@param type string
+---@param node (TSNode|nil)
+---@param depth integer depth 0 means current node and return nil
+function M.search_child_with_type(type, node, depth)
+  assert(node)
+  if depth <= 0 then return nil end
+  for child in node:iter_children() do
+    if child:type() == type then
+      return node
+    end
+    return M.search_child_with_type(type, child, depth - 1)
+  end
+  return nil
+end
+
 ---search for children node with matching list of type
 ---@return (TSNode|nil)
 ---@param types string[]

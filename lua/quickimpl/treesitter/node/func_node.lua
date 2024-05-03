@@ -8,9 +8,14 @@ local Type = require "quickimpl.treesitter.node.cpp_type"
 ---Check if the declaration is a function declaration
 local function has_child_func_decl(node)
   if not node then return false end
-  for child in node:iter_children() do
-    if child:type() == Type.FUNCTION_DECLARATOR then return true end
-    has_child_func_decl(child)
+  -- for child in node:iter_children() do
+  --   if child:type() == Type.FUNCTION_DECLARATOR then
+  --     return true
+  --   end
+  -- end
+  if ts_util.search_child_with_type(Type.FUNCTION_DECLARATOR, node, 2)
+  then
+    return true
   end
   return false
 end
@@ -37,7 +42,9 @@ local is_valid_func_node = function(node)
       return has_child_func_decl(_node) and not is_pure_virtual(_node)
     end,
     [Type.FRIEND_DECLARATION] = function(_node)
-      if has_child_func_decl(_node) then return true end
+      for child in _node:iter_children() do
+        if has_child_func_decl(child) then return true end
+      end
     end
   }
   local type = node:type()
