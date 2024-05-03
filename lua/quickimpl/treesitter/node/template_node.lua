@@ -28,15 +28,24 @@ end
 
 -------------------------------------------------------------------------------
 
+---@return TSNode
 function TemplateNode:get_node()
   return self.node
 end
 
+---@return string
+function TemplateNode:get_template_decl()
+  assert(self.param_list)
+  return 'template'..ts.get_node_text(self.param_list, 0)..'\n'
+end
+
+---@return string
 function TemplateNode:get_param_list()
   assert(self.param_list)
   return ts.get_node_text(self.param_list, 0)
 end
 
+---@return string
 function TemplateNode:get_arg_list()
   if self.param_list == nil or self.param_list:child_count() == 0 then
     return '<>'
@@ -50,7 +59,8 @@ function TemplateNode:get_arg_list()
       arg_list = arg_list..','
     end
   end
-  return string.gsub(arg_list, ",$", ">")
+  arg_list = string.gsub(arg_list, ",$", ">")
+  return arg_list
 end
 
 -------------------------------------------------------------------------------

@@ -31,23 +31,42 @@ FunctionDeclaration.new = function(node)
   self.type = self.funcNode:get_type()
   self.scs = self.funcNode:get_storage_class_specifier()
   self.declarator = self.funcNode:get_declarator()
+  self.class = ''
+  self.template = ''
 
-  local template_function_node = self.funcNode:get_template()
-  self.template = template_function_node
-    and 'template'..template_function_node:get_param_list()..'\n'
+  ---assign function template if applicable
+  local templ_func_node = self.funcNode:get_template()
+  self.template = templ_func_node
+    and templ_func_node:get_template_decl()
     or ''
 
-  self.class = ''
-  local class_node = ClassNode.new(self.funcNode:get_parent_class())
-  if class_node then
-    local template_class_node = class_node:get_template()
-    self.class = self.class..class_node:get_identifier()
-    if template_class_node then
-      self.class = self.class..template_class_node:get_arg_list()
+  ---assign class and class template if applicable
+  if not self.funcNode:has_friend_node() then
+    local classNode = ClassNode.new(self.funcNode:get_parent_class())
+    local templ_class_node = classNode and classNode:get_template() or nil
+    if classNode then
+      self.class = classNode:get_identifier()
+      if templ_class_node then
+        self.class = self.class..templ_class_node:get_arg_list()
+        self.template = templ_class_node:get_template_decl()..self.template
+      end
+      self.class = self.class..'::'
     end
-    self.class = self.class..'::'
   end
   return self
+end
+
+---@return table<string>
+function FunctionDeclaration:get_decl()
+  return {
+    string.format("%s%s%s%s%s",
+      self.template,
+      self.scs,
+      self.type,
+      self.class,
+      self.declarator
+    )
+  }
 end
 
 ---@return table<string>
@@ -67,6 +86,10 @@ end
 
 ---@return TSNode
 function FunctionDeclaration:get_node()
+  local template_node = self.funcNode:get_template()
+  if  template_node then
+    return template_node:get_node()
+  end
   return self.funcNode:get_node()
 end
 

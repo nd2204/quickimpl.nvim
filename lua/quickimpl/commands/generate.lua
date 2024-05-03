@@ -26,10 +26,13 @@ M.opts = {
 
 local get_cursor = function()
   local node = ts.get_node()
-  while node ~= nil and not (DeclarationFactory(node)) do
+  local decl = DeclarationFactory(node) 
+  while node and not decl do
     node = node:parent()
+    if not node then break end
+    decl = DeclarationFactory(node)
   end
-  return node
+  return decl and decl:get_node() or nil
 end
 
 --------------------------------------------------------------------------------
@@ -48,7 +51,9 @@ M.callback = function(params)
   if not decl then return end
 
   ts_util.highlight_node(cursor_node, ns, decl:get_type())
-  vim.print(decl:define())
+  for _, def in pairs(decl:define()) do
+    vim.print(def)
+  end
 
   local id = vim.api.nvim_create_autocmd('CursorMoved', {
     group = group,
@@ -77,7 +82,9 @@ M.callback = function(params)
       vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
       vim.api.nvim_del_autocmd(id)
       vim.api.nvim_buf_del_keymap(0, "n", "<CR>")
-      vim.print(decl:define())
+      for _, def in pairs(decl:define()) do
+        vim.print(def)
+      end
     end
   })
 end

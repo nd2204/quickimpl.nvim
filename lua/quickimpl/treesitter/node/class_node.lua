@@ -38,7 +38,7 @@ ClassNode.new = function(node)
   if not is_valid_class_node(node) then return nil end
   self.node = node
 
-  local parent = ts_util.first_parent_with_type(Type.TEMPLATE_DECLARATION, node)
+  local parent = ts_util.search_parent_with_type(Type.TEMPLATE_DECLARATION, node, 1)
   self.template = parent and TemplateNode.new(parent) or TemplateNode.new(node)
 
   if self.template then
@@ -47,7 +47,6 @@ ClassNode.new = function(node)
       self.template:get_node()))
   end
 
-  self.node = node
   return self
 end
 
@@ -60,9 +59,6 @@ end
 
 ---@return TSNode
 function ClassNode:get_node()
-  if self.template then
-    return self.template:get_node()
-  end
   return self.node
 end
 

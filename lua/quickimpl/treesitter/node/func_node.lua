@@ -6,9 +6,11 @@ local Type = require "quickimpl.treesitter.node.cpp_type"
 -------------------------------------------------------------------------------
 
 ---Check if the declaration is a function declaration
-local has_child_func_decl = function(node)
+local function has_child_func_decl(node)
+  if not node then return false end
   for child in node:iter_children() do
     if child:type() == Type.FUNCTION_DECLARATOR then return true end
+    has_child_func_decl(child)
   end
   return false
 end
@@ -35,9 +37,7 @@ local is_valid_func_node = function(node)
       return has_child_func_decl(_node) and not is_pure_virtual(_node)
     end,
     [Type.FRIEND_DECLARATION] = function(_node)
-      for child in _node:iter_children() do
-        if has_child_func_decl(child) then return true end
-      end
+      if has_child_func_decl(_node) then return true end
     end
   }
   local type = node:type()
@@ -51,6 +51,7 @@ end
 ---@field template (TemplateNode|nil)
 ---@field children (TSNode|nil)
 ---@field node (TSNode)
+---@field friend (TSNode)
 local FuncNode = {}
 FuncNode.__index = FuncNode
 
@@ -62,7 +63,7 @@ FuncNode.new = function(node)
   self.node = node
 
   --- init template node
-  local parent = ts_util.search_parent_with_type(Type.TEMPLATE_DECLARATION, node, 1)
+  local parent = ts_util.search_parent_with_type(Type.TEMPLATE_DECLARATION, node, 2)
   self.template = parent and TemplateNode.new(parent) or TemplateNode.new(node)
 
   --- check if node is a template node if true then find
@@ -77,6 +78,7 @@ FuncNode.new = function(node)
   if self.node:type() == Type.FRIEND_DECLARATION
        or node:type() == Type.FRIEND_DECLARATION
   then
+    self.friend = self.node
     self.node = assert(ts_util.first_child_with_types(
       {Type.DECLARATION, Type.FIELD_DECLARATION},
       self.node))
@@ -129,7 +131,12 @@ end
 
 ---@return TSNode
 function FuncNode:get_node()
-  return self.template and self.template:get_node() or self.node
+  return self.node
+end
+
+---@return boolean
+function FuncNode:has_friend_node()
+  return self.friend and true or false
 end
 
 -------------------------------------------------------------------------------

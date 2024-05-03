@@ -5,6 +5,10 @@ local NsDecl    = require "quickimpl.treesitter.declaration.ns_decl"
 --------------------------------------------------------------------------------
 
 local declaration_classes = { FuncDecl, ClassDecl, NsDecl }
+---@return FunctionDeclaration
+---| ClassDeclaration
+---| NamespaceDeclaration
+---| nil
 local DeclarationFactory = function(node)
   local decl
   for _, declaration in pairs(declaration_classes) do
