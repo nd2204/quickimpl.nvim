@@ -13,8 +13,7 @@ local function has_child_func_decl(node)
   --     return true
   --   end
   -- end
-  if ts_util.search_child_with_type(Type.FUNCTION_DECLARATOR, node, 2)
-  then
+  if ts_util.search_child_with_type(Type.FUNCTION_DECLARATOR, node, 2) then
     return true
   end
   return false
@@ -28,27 +27,16 @@ local is_pure_virtual = function(node)
 end
 
 local is_valid_func_node = function(node)
-  if node == nil then return false end
-  local valid_type = {
-    [Type.TEMPLATE_DECLARATION] = function(_node)
-      for child in _node:iter_children() do
-        if has_child_func_decl(child) then return true end
-      end
-    end,
-    [Type.FIELD_DECLARATION] = function(_node)
-      return has_child_func_decl(_node) and not is_pure_virtual(_node)
-    end,
-    [Type.DECLARATION] = function(_node)
-      return has_child_func_decl(_node) and not is_pure_virtual(_node)
-    end,
-    [Type.FRIEND_DECLARATION] = function(_node)
-      for child in _node:iter_children() do
-        if has_child_func_decl(child) then return true end
-      end
-    end
-  }
   local type = node:type()
-  return valid_type[type] ~= nil and valid_type[type](node)
+  if type == Type.TEMPLATE_DECLARATION or type == Type.FRIEND_DECLARATION then
+    for child in node:iter_children() do
+      if has_child_func_decl(child) then return true end
+    end
+  end
+  if type == Type.FIELD_DECLARATION or type == Type.DECLARATION then
+    return has_child_func_decl(node) and not is_pure_virtual(node)
+  end
+  return false
 end
 
 -------------------------------------------------------------------------------
@@ -66,6 +54,7 @@ FuncNode.__index = FuncNode
 
 FuncNode.new = function(node)
   local self = setmetatable({}, FuncNode)
+  if node == nil then return nil end
   if not is_valid_func_node(node) then return nil end
   self.node = node
 

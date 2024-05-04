@@ -7,7 +7,7 @@ local M = {}
 ---@param type string
 ---@param node (TSNode|nil)
 M.first_parent_with_type = function(type ,node)
-  assert(node)
+  if node == nil or not node:named() then return nil end
   while node ~= nil and node:type() ~= type do
     node = node:parent()
   end
@@ -19,8 +19,8 @@ end
 ---@param type string
 ---@param node (TSNode|nil)
 ---@param height (integer)
-M.search_parent_with_type = function(type ,node, height)
-  assert(node)
+function M.search_parent_with_type(type ,node, height)
+  if node == nil or not node:named() then return nil end
   for _ = 1, height do
     node = node:parent()
     if node ~= nil and node:type() == type then
@@ -34,8 +34,8 @@ end
 ---@return (TSNode|nil)
 ---@param type string
 ---@param node (TSNode|nil)
-M.first_child_with_type = function(type, node)
-  if not node then return nil end
+function M.first_child_with_type(type, node)
+  if node == nil or not node:named() then return nil end
   for child in node:iter_children() do
     if child:type() == type then
       return child
@@ -50,13 +50,14 @@ end
 ---@param node (TSNode|nil)
 ---@param depth integer depth 0 means current node and return nil
 function M.search_child_with_type(type, node, depth)
-  assert(node)
+  if node == nil or not node:named() then return nil end
+  if node:type() == type then return node end
   if depth <= 0 then return nil end
   for child in node:iter_children() do
-    if child:type() == type then
-      return node
+    local result = M.search_child_with_type(type, child, depth - 1)
+    if result then
+      return result
     end
-    return M.search_child_with_type(type, child, depth - 1)
   end
   return nil
 end
@@ -65,17 +66,12 @@ end
 ---@return (TSNode|nil)
 ---@param types string[]
 ---@param node (TSNode|nil)
-M.first_child_with_types = function(types, node)
-  assert(node)
+function M.first_child_with_types(types, node)
+  if node == nil or not node:named() then return nil end
   for child in node:iter_children() do
     if vim.tbl_contains(types, child:type()) then
       return child
     end
-    -- for i = 1, #types do
-    --   if child:type() == types[i] then
-    --     return child
-    --   end
-    -- end
   end
   return nil
 end
@@ -83,7 +79,7 @@ end
 ---recursively searching for all children in associate with their type
 ---@return table<string,(TSNode|nil)>
 ---@param node (TSNode|nil)
-M.get_all_child = function(node)
+function M.get_all_child (node)
   assert(node)
   local children = {}
   if not node then return children end

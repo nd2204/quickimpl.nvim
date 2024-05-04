@@ -28,6 +28,7 @@ The plugin depends on [nvim-treesitter](https://github.com/nvim-treesitter/nvim-
 and the C++ parser, which can be installed via `:TSInstall cpp`
 
 [lazy.nvim](https://github.com/folke/lazy.nvim):
+
 ```lua
 require('lazy').setup({
   {
@@ -36,6 +37,7 @@ require('lazy').setup({
   }
 })
 ```
+
 [vim-plug](https://github.com/junegunn/vim-plug):
 ```vim
 Plug 'nvim-treesitter/nvim-treesitter'

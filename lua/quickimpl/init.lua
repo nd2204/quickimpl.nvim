@@ -23,7 +23,7 @@ vim.api.nvim_create_user_command("QIReload", function()
   end
 end, {})
 
-vim.keymap.set("n", "<leader>r", "<CMD>QIReload<CR>", {desc = "Reload Quickimpl"})
-vim.keymap.set("n", "<leader>g", "<CMD>QIGenerate<CR>", {desc = "Generate implementation"})
+vim.keymap.set("n", "<leader>ir", "<CMD>QIReload<CR>", {desc = "Reload Quickimpl"})
+vim.keymap.set("n", "<leader>ig", "<CMD>QIGenerate<CR>", {desc = "Generate implementation"})
 
 return M
