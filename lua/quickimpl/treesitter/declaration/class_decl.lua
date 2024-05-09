@@ -38,6 +38,14 @@ function ClassDeclaration:define()
   return definitions_list
 end
 
+function ClassDeclaration:get_declaration()
+  local definitions_list = {}
+  for _, func_decl in pairs(self.function_list) do
+    table.insert(definitions_list, func_decl:get_declaration()[1])
+  end
+  return definitions_list
+end
+
 ---@return TSNode
 function ClassDeclaration:get_node()
   local template_node = self.classNode:get_template()

@@ -57,7 +57,7 @@ FunctionDeclaration.new = function(node)
 end
 
 ---@return table<string>
-function FunctionDeclaration:get_decl()
+function FunctionDeclaration:get_declaration()
   return {
     string.format("%s%s%s%s%s",
       self.template,

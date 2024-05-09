@@ -14,7 +14,7 @@ M.first_parent_with_type = function(type ,node)
   return node
 end
 
----get parent node if it has matching type
+---get parent node if it has matching type recursively
 ---@return (TSNode|nil)
 ---@param type string
 ---@param node (TSNode|nil)
@@ -44,7 +44,7 @@ function M.first_child_with_type(type, node)
   return nil
 end
 
----Search for children node with matching type
+---Search for children node with matching type recursively
 ---@return (TSNode|nil)
 ---@param type string
 ---@param node (TSNode|nil)

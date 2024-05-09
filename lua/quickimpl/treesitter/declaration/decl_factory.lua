@@ -1,13 +1,11 @@
 local FuncDecl  = require "quickimpl.treesitter.declaration.func_decl"
 local ClassDecl = require "quickimpl.treesitter.declaration.class_decl"
-local NsDecl    = require "quickimpl.treesitter.declaration.ns_decl"
 
 --------------------------------------------------------------------------------
 
-local declaration_classes = { FuncDecl, ClassDecl, NsDecl }
+local declaration_classes = { FuncDecl, ClassDecl }
 ---@return FunctionDeclaration
 ---| ClassDeclaration
----| NamespaceDeclaration
 ---| nil
 local DeclarationFactory = function(node)
   local decl

@@ -6,7 +6,7 @@ local M = {}
 
 local default_config = {
   -- add_header_include = true,
-  brace_pattern = "{\n\t\n}\n\n",
+  brace_pattern = "{\n\t\n}\n",
 }
 
 M.config = default_config
