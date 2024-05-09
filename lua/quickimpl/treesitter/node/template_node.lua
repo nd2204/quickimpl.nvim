@@ -6,6 +6,7 @@ local ts = vim.treesitter
 
 ---@class TemplateNode
 ---@field node (TSNode)
+---@field bufnr integer
 ---@field param_list (TSNode|nil)
 local TemplateNode = {}
 TemplateNode.__index = TemplateNode
@@ -36,13 +37,13 @@ end
 ---@return string
 function TemplateNode:get_template_decl()
   assert(self.param_list)
-  return 'template'..ts.get_node_text(self.param_list, 0)..'\n'
+  return 'template'..ts.get_node_text(self.param_list, self.bufnr)..'\n'
 end
 
 ---@return string
 function TemplateNode:get_param_list()
   assert(self.param_list)
-  return ts.get_node_text(self.param_list, 0)
+  return ts.get_node_text(self.param_list, self.bufnr)
 end
 
 ---@return string
@@ -54,7 +55,7 @@ function TemplateNode:get_arg_list()
   for child in self.param_list:iter_children() do
     local type_identifier = ts_util.first_child_with_type(Type.TYPE_IDENTIFIER, child)
     if type_identifier then
-      arg_list = arg_list..ts.get_node_text(type_identifier, 0)..','
+      arg_list = arg_list..ts.get_node_text(type_identifier, self.bufnr)..','
     elseif child:named() then
       arg_list = arg_list..','
     end

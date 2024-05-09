@@ -11,16 +11,16 @@ ClassDeclaration.__index = ClassDeclaration
 
 -------------------------------------------------------------------------------
 
-ClassDeclaration.new = function(node)
+ClassDeclaration.new = function(node, bufnr)
   local self = setmetatable({}, ClassDeclaration)
 
-  self.classNode = ClassNode.new(node)
+  self.classNode = ClassNode.new(node, bufnr)
   if not self.classNode then return nil end
 
   self.function_list = {}
   local func_decl
   for _, _node in self.classNode:iter_func_decl() do
-    func_decl = FuncDecl.new(_node)
+    func_decl = FuncDecl.new(_node, bufnr)
     if func_decl then
       table.insert(self.function_list, func_decl)
     end
@@ -29,7 +29,7 @@ ClassDeclaration.new = function(node)
 end
 
 ---Return a list of defined function in a class
----@return table
+---@return table<string>
 function ClassDeclaration:define()
   local definitions_list = {}
   for _, func_decl in pairs(self.function_list) do
@@ -38,12 +38,13 @@ function ClassDeclaration:define()
   return definitions_list
 end
 
+---@return table<string>
 function ClassDeclaration:get_declaration()
-  local definitions_list = {}
+  local declaration_list = {}
   for _, func_decl in pairs(self.function_list) do
-    table.insert(definitions_list, func_decl:get_declaration()[1])
+    table.insert(declaration_list, func_decl:get_declaration()[1])
   end
-  return definitions_list
+  return declaration_list
 end
 
 ---@return TSNode

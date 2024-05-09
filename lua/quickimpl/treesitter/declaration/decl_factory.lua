@@ -7,10 +7,10 @@ local declaration_classes = { FuncDecl, ClassDecl }
 ---@return FunctionDeclaration
 ---| ClassDeclaration
 ---| nil
-local DeclarationFactory = function(node)
+local DeclarationFactory = function(node, bufnr)
   local decl
   for _, declaration in pairs(declaration_classes) do
-    decl = declaration.new(node)
+    decl = declaration.new(node, bufnr)
     if decl then return decl end
   end
   return nil

@@ -27,16 +27,18 @@ end
 
 ---@class ClassNode
 ---@field node TSNode
+---@field bufnr integer
 ---@field template (TemplateNode|nil)
 local ClassNode = {}
 ClassNode.__index = ClassNode
 
 -------------------------------------------------------------------------------
 
-ClassNode.new = function(node)
+ClassNode.new = function(node, bufnr)
   local self = setmetatable({}, ClassNode)
   if not is_valid_class_node(node) then return nil end
   self.node = node
+  self.bufnr = bufnr or 0
 
   local parent = ts_util.search_parent_with_type(Type.TEMPLATE_DECLARATION, node, 1)
   self.template = parent and TemplateNode.new(parent) or TemplateNode.new(node)
@@ -54,7 +56,7 @@ end
 function ClassNode:get_identifier()
   local identifer = ts_util.first_child_with_type(Type.TYPE_IDENTIFIER, self.node)
   if identifer == nil then return '' end
-  return ts.get_node_text(identifer, 0)
+  return ts.get_node_text(identifer, self.bufnr)
 end
 
 ---@return TSNode

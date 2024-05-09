@@ -22,27 +22,19 @@ FunctionDeclaration.__index = FunctionDeclaration
 
 -------------------------------------------------------------------------------
 
-FunctionDeclaration.new = function(node)
+FunctionDeclaration.new = function(node, bufnr)
   local self = setmetatable({}, FunctionDeclaration)
 
-  self.funcNode = FuncNode.new(node)
+  self.funcNode = FuncNode.new(node, bufnr)
   if not self.funcNode then return nil end
-
-  self.type = self.funcNode:get_type()
-  self.scs = self.funcNode:get_storage_class_specifier()
-  self.declarator = self.funcNode:get_declarator()
-  self.class = ''
-  self.template = ''
 
   ---assign function template if applicable
   local templ_func_node = self.funcNode:get_template()
-  self.template = templ_func_node
-    and templ_func_node:get_template_decl()
-    or ''
-
+  self.template = templ_func_node and templ_func_node:get_template_decl() or ''
+  self.class = ''
   ---assign class and class template if applicable
   if not self.funcNode:has_friend_node() then
-    local classNode = ClassNode.new(self.funcNode:get_parent_class())
+    local classNode = ClassNode.new(self.funcNode:get_parent_class(), bufnr)
     local templ_class_node = classNode and classNode:get_template() or nil
     if classNode then
       self.class = classNode:get_identifier()
@@ -61,10 +53,10 @@ function FunctionDeclaration:get_declaration()
   return {
     string.format("%s%s%s%s%s",
       self.template,
-      self.scs,
-      self.type,
+      self.funcNode:get_storage_class_specifier(),
+      self.funcNode:get_type(),
       self.class,
-      self.declarator
+      self.funcNode:get_declarator()
     )
   }
 end
@@ -75,10 +67,10 @@ function FunctionDeclaration:define()
   return {
     string.format("%s%s%s%s%s%s",
       self.template,
-      self.scs,
-      self.type,
+      self.funcNode:get_storage_class_specifier(),
+      self.funcNode:get_type(),
       self.class,
-      self.declarator,
+      self.funcNode:get_declarator(),
       brace_pattern
     )
   }
@@ -87,7 +79,7 @@ end
 ---@return TSNode
 function FunctionDeclaration:get_node()
   local template_node = self.funcNode:get_template()
-  if  template_node then
+  if template_node then
     return template_node:get_node()
   end
   return self.funcNode:get_node()

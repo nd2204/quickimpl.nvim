@@ -5,6 +5,7 @@ return {
   FIELD_DECLARATION           = 'field_declaration',
   FRIEND_DECLARATION          = 'friend_declaration',
   TYPE_IDENTIFIER             = 'type_identifier',
+  QUALIFIED_IDENTIFIER        = 'qualified_identifier',
   TYPE_PARAMETER_DECLARATION  = 'type_parameter_declaration',
   PRIMITIVE_TYPE              = 'primitive_type',
   NUMBER_LITERAL              = 'number_literal',
@@ -12,4 +13,6 @@ return {
   CLASS_SPECIFIER             = 'class_specifier',
   FIELD_DECLARATION_LIST      = 'field_declaration_list',
   TEMPLATE_PARAMETER_LIST     = 'template_parameter_list',
+  FUNCTION_DEFINITION         = 'function_definition',
+  PURE_VIRTUAL_CLAUSE         = 'pure_virtual_clause',
 }
