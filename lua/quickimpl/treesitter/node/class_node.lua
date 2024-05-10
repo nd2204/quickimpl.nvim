@@ -41,7 +41,7 @@ ClassNode.new = function(node, bufnr)
   self.bufnr = bufnr or 0
 
   local parent = ts_util.search_parent_with_type(Type.TEMPLATE_DECLARATION, node, 1)
-  self.template = parent and TemplateNode.new(parent) or TemplateNode.new(node)
+  self.template = parent and TemplateNode.new(parent, bufnr) or TemplateNode.new(node, bufnr)
 
   if self.template then
     self.node = assert(ts_util.first_child_with_type(
@@ -76,7 +76,7 @@ function ClassNode:iter_func_decl()
     self.node)
   if declaration_list == nil then return ipairs({}) end
   for child in declaration_list:iter_children() do
-    local func_node = FuncNode.new(child)
+    local func_node = FuncNode.new(child, bufnr)
     if func_node then
       table.insert(function_declarations, child)
     end

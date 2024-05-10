@@ -127,7 +127,7 @@ function M.get_sourcefile_equivalence(headerfile_path, lang)
   local sourcefile_name = M.change_ext(headerfile_name, sourcefile_ext)
 
   local sourcedir_path = attempt_to_get_source_dir(headerfile_path)
-  local sourcefile_path = fs.joinpath(sourcedir_path, sourcefile_name)
+  local sourcefile_path = sourcedir_path ..'/'.. sourcefile_name
 
   print(sourcefile_path)
 

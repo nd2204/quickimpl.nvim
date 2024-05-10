@@ -65,7 +65,7 @@ FuncNode.new = function(node, bufnr)
 
   --- init template node
   local parent = ts_util.search_parent_with_type(Type.TEMPLATE_DECLARATION, node, 2)
-  self.template = parent and TemplateNode.new(parent) or TemplateNode.new(node, bufnr)
+  self.template = parent and TemplateNode.new(parent, bufnr) or TemplateNode.new(node, bufnr)
 
   --- check if node is a template node if true then find
   --- the actual function node and reassign the node field

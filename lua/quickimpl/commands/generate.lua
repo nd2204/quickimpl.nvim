@@ -32,7 +32,7 @@ local get_cursor = function(b)
   while node and not decl do
     node = node:parent()
     if not node then break end
-    decl = DeclarationFactory(node)
+    decl = DeclarationFactory(node, b)
   end
   return decl and decl:get_node() or nil
 end
@@ -46,7 +46,7 @@ M.callback = function(params)
   local srcview = assert(SourceView.new(buf, 'cpp'))
   
   local cursor_node = get_cursor(buf)
-  local decl = DeclarationFactory(cursor_node)
+  local decl = DeclarationFactory(cursor_node, buf)
   if not decl then return end
   ts_util.highlight_node(cursor_node, srcview.ns, decl:get_type())
 
@@ -56,8 +56,8 @@ M.callback = function(params)
     group = group,
     buffer = buf,
     callback = function()
-      cursor_node = get_cursor()
-      decl = DeclarationFactory(cursor_node)
+      cursor_node = get_cursor(buf)
+      decl = DeclarationFactory(cursor_node, buf)
       if not decl then return end
       ts_util.highlight_node(cursor_node, srcview.ns, decl:get_type())
     end,

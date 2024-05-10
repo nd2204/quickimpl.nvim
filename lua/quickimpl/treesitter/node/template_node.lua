@@ -14,12 +14,13 @@ TemplateNode.__index = TemplateNode
 -------------------------------------------------------------------------------
 
 ---@param node (TSNode|nil)
-TemplateNode.new = function(node)
+TemplateNode.new = function(node, bufnr)
   local self = setmetatable({}, TemplateNode)
   if node == nil or node:type() ~= Type.TEMPLATE_DECLARATION then
     return nil
   end
   self.node = node
+  self.bufnr = bufnr or 0
   self.param_list = ts_util.first_child_with_type(
     Type.TEMPLATE_PARAMETER_LIST,
     self.node
