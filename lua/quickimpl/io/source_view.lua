@@ -104,6 +104,7 @@ function SourceView:append(decl)
       vim.notify(v.." Already Implemented")
     else
       fs_util.file_append_content(self.path, v..config.get_key_value('brace_pattern'))
+      self.defined[v] = true
     end
   end
 end
